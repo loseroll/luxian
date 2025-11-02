@@ -1,0 +1,2936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>阿拉斯加秋鲑群体洄游路线简化模拟器</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Microsoft YaHei',Arial,sans-serif}
+        body{background:#f0f8ff;color:#333;line-height:1.6}
+        .container{max-width:1400px;margin:0 auto;padding:20px}
+        header{text-align:center;margin-bottom:30px;padding:20px;background:linear-gradient(135deg,#1e5799 0%,#207cca 100%);color:#fff;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+        h1{font-size:2.2rem;margin-bottom:8px}
+        .subtitle{opacity:.9}
+        .content{display:flex;flex-wrap:wrap;gap:20px}
+        .control-panel{flex:1;min-width:320px;background:#fff;padding:22px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.08);max-height:680px;overflow-y:auto}
+        .map-container{flex:2;min-width:520px;height:680px;border-radius:10px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,.08);position:relative}
+        #map{width:100%;height:100%}
+        .parameter-group{margin-bottom:22px}
+        .parameter-group h3{margin-bottom:12px;color:#1e5799;border-bottom:2px solid #e0e0e0;padding-bottom:6px}
+        .parameter{margin-bottom:12px}
+        label{display:block;margin-bottom:6px;font-weight:600;color:#444}
+        input[type="range"]{width:100%}
+        select,input[type="number"],input[type="text"]{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px}
+        .value-display{display:flex;justify-content:space-between;margin-top:5px;color:#666;font-size:.92rem}
+        .basemap-selector{display:flex;flex-wrap:wrap;gap:8px}
+        .basemap-option{flex:1;min-width:80px;padding:8px;text-align:center;background:#f0f0f0;border-radius:6px;cursor:pointer;transition:.2s;font-size:.85rem}
+        .basemap-option.active{background:#1e5799;color:#fff}
+
+        /* 修改图层控制面板样式 */
+        .layer-control {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #fff;
+            padding: 8px; /* 减少内边距 */
+            border-radius: 6px; /* 减小圆角 */
+            box-shadow: 0 2px 8px rgba(0,0,0,.15); /* 减小阴影 */
+            z-index: 1000;
+            max-width: 160px; /* 减小最大宽度 */
+            font-size: 0.75rem; /* 减小字体大小 */
+        }
+
+        .layer-control h4 {
+            margin-bottom: 6px; /* 减小标题间距 */
+            color: #1e5799;
+            font-size: 0.85rem; /* 标题字体稍大但保持紧凑 */
+            border-bottom: 1px solid #e0e0e0; /* 使用更细的边框 */
+            padding-bottom: 4px;
+        }
+
+        .layer-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px; /* 减小选项间距 */
+        }
+
+        .layer-option input {
+            margin-right: 6px; /* 减小输入框右边距 */
+            transform: scale(0.85); /* 稍微缩小复选框 */
+        }
+
+        .layer-option label {
+            font-size: 0.75rem; /* 减小标签字体大小 */
+            margin-bottom: 0; /* 移除默认边距 */
+        }
+
+        /* 修改图例面板样式，使其更紧凑 */
+        .legend {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: #fff;
+            padding: 6px; /* 进一步减少内边距 */
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            z-index: 1000;
+            max-width: 140px; /* 进一步限制最大宽度 */
+            font-size: 0.7rem; /* 进一步减小字体大小 */
+        }
+
+        .legend h4 {
+            margin-bottom: 4px; /* 进一步减小标题间距 */
+            color: #1e5799;
+            font-size: 0.8rem; /* 标题字体稍大但保持紧凑 */
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 3px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 3px; /* 进一步减小项目间距 */
+        }
+
+        .legend-color {
+            width: 12px; /* 进一步减小颜色块大小 */
+            height: 12px;
+            margin-right: 5px; /* 进一步减小右边距 */
+            border-radius: 2px;
+        }
+
+        .info-panel,.simulation-info{margin-top:14px;padding:12px;border-radius:8px}
+        .info-panel{background:#e8f4ff;border-left:4px solid #1e5799}
+        .simulation-info{background:#f9f9f9}
+        .accuracy-panel{margin-top:14px;padding:12px;background:#f0f8f0;border-left:4px solid #2e8b57;border-radius:8px}
+        .accuracy-metric{margin-bottom:10px}
+        .metric-name{font-weight:700}
+        .progress-bar{height:8px;background:#e0e0e0;border-radius:4px;margin-top:4px;overflow:hidden}
+        .progress-fill{height:100%;background:#2e8b57}
+        .click-info{position:absolute;top:16px;left:16px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.2);z-index:1100;max-width:280px;display:none;border-left:4px solid #1e5799}
+        .click-info .close-btn{position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.1rem;cursor:pointer;color:#666}
+        .coordinate-row{display:flex;gap:10px}
+        .coordinate-row>div{flex:1}
+        .hint{font-size:.82rem;color:#777;margin-top:4px}
+        .err{display:none;font-size:.82rem;color:#c0392b;margin-top:4px}
+        button{display:block;width:100%;padding:12px;background:#1e5799;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;margin-top:12px}
+        button:hover{background:#184a86}
+        .region-hint{margin-top:10px;padding:8px;background:#e8f4ff;border-radius:6px;font-size:0.85rem}
+        .env-chart-container{margin-top:14px;padding:12px;background:#f9f9f9;border-radius:8px;border-left:4px solid #8a6d3b}
+        .env-chart{height:120px;width:100%;margin-top:8px;position:relative}
+        .env-chart-line{position:absolute;bottom:0;width:100%;height:100%;}
+        .env-chart-label{font-size:0.75rem;color:#666;margin-top:4px}
+        .env-chart-legend{display:flex;justify-content:space-around;margin-top:8px;font-size:0.75rem}
+        .env-chart-legend-item{display:flex;align-items:center}
+        .env-chart-legend-color{width:12px;height:12px;margin-right:4px;border-radius:2px}
+        .path-dependency-panel{margin-top:14px;padding:12px;background:#fff8f0;border-left:4px solid #d35400;border-radius:8px}
+        .path-dependency-metric{margin-bottom:8px}
+        .dependency-name{font-weight:600;color:#d35400}
+        .status-panel{margin-top:10px;padding:8px;background:#f8f8f8;border-radius:6px;font-size:0.8rem;color:#666}
+        .water-boundary{fill:#a0c8f0;fill-opacity:0.1;stroke:#1e5799;stroke-width:1;stroke-dasharray:5,5}
+        .grdc-river{stroke-linecap:round;stroke-linejoin:round}
+        .river-label{font-size:11px;font-weight:bold;text-shadow:1px 1px 2px white;pointer-events:none}
+        .data-source-info{background:#f0f8f0;border-left:4px solid #2e8b57;padding:10px;margin-top:10px;border-radius:6px;font-size:0.8rem}
+
+        /* 新增：底部面板区域 */
+        .bottom-panels{display:flex;gap:20px;margin-top:20px}
+        .bottom-panel{flex:1;background:#fff;padding:16px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.08);min-height:200px}
+        .bottom-panel h3{margin-bottom:12px;color:#1e5799;border-bottom:2px solid #e0e0e0;padding-bottom:6px}
+
+        /* 新增：群体行为参数样式 */
+        .group-behavior-panel{margin-top:14px;padding:12px;background:#f0f0f8;border-left:4px solid #6a5acd;border-radius:8px}
+
+        /* 新增：路径数据面板样式 */
+        .path-data-panel{position:absolute;top:16px;left:320px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.15);z-index:1000;max-width:300px;display:none;max-height:400px;overflow-y:auto}
+        .path-data-panel h4{margin-bottom:8px;color:#1e5799;border-bottom:1px solid #e0e0e0;padding-bottom:4px}
+        .path-data-item{display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.8rem}
+        .path-data-label{font-weight:600;color:#555}
+        .path-data-value{color:#333}
+        .path-data-close{position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.1rem;cursor:pointer;color:#666}
+
+        /* 新增：索饵场相关样式 */
+        .feeding-area{fill-opacity:0.15;stroke-width:2;stroke-dasharray:5,5}
+        .feeding-area-marker{background:#9b59b6 !important}
+
+        /* 水域参考路径样式 */
+        .water-reference-path {
+            stroke-dasharray: 10, 5;
+            opacity: 0.5;
+        }
+
+        /* 水域节点标记样式 */
+        .water-node-marker {
+            background: #3498db;
+            border: 2px solid #1e5799;
+        }
+
+        /* 优化进度显示 */
+        .optimization-info {
+            background: #e8f4ff;
+            border-left: 4px solid #3498db;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        /* 确保在移动设备上也能保持紧凑 */
+        @media (max-width:768px){
+            .content{flex-direction:column}
+            .map-container{height:480px}
+            .coordinate-row{flex-direction:column}
+            .bottom-panels{flex-direction:column}
+            .path-data-panel{left:16px;top:120px;max-width:calc(100% - 32px)}
+            
+            /* 移动设备上图层控制面板进一步缩小 */
+            .layer-control {
+                max-width: 140px; /* 移动设备上更窄 */
+                padding: 6px;
+                font-size: 0.7rem;
+            }
+            
+            .layer-control h4 {
+                font-size: 0.8rem;
+            }
+            
+            /* 移动设备上图例进一步缩小 */
+            .legend {
+                max-width: 120px; /* 在移动设备上更窄 */
+                padding: 5px;
+                font-size: 0.65rem;
+            }
+            
+            .legend h4 {
+                font-size: 0.75rem;
+            }
+            
+            .legend-color {
+                width: 10px;
+                height: 10px;
+            }
+        }
+
+        /* 群体路径样式 */
+        .individual-path{opacity:0.3;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+        .group-consensus-path{stroke-width:6;opacity:0.9}
+        .confidence-interval{fill-opacity:0.1;stroke-width:0}
+
+        /* 统计信息样式 */
+        .statistics-panel{margin-top:14px;padding:12px;background:#f8f0f8;border-left:4px solid #8e44ad;border-radius:8px}
+        .stat-item{display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.85rem}
+        .stat-label{font-weight:600}
+        .stat-value{}
+
+        .progress-container{display:flex;align-items:center;margin-top:10px}
+        .progress-label{width:120px;font-size:0.8rem}
+        .progress-bar{flex:1;height:8px;background:#e0e0e0;border-radius:4px;margin:0 10px;overflow:hidden}
+        .progress-fill{height:100%;transition:width 0.3s}
+        .progress-value{width:40px;font-size:0.8rem;text-align:right}
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>阿拉斯加秋鲑群体洄游路线简化模拟器</h1>
+        <div class="subtitle">多智能体模拟 + 水域路径优化 + 动态索饵场</div>
+    </header>
+
+    <div class="content">
+        <div class="control-panel">
+            <div class="parameter-group">
+                <h3>地图样式</h3>
+                <div class="basemap-selector">
+                    <div class="basemap-option active" data-basemap="satellite">卫星图</div>
+                    <div class="basemap-option" data-basemap="dark">夜视图</div>
+                    <div class="basemap-option" data-basemap="water">水域图</div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>洄游终点（河流）</h3>
+                <select id="river-select">
+                    <!-- 由 JS 注入所有河流选项 -->
+                </select>
+                <div class="hint">基于报告中的河流经纬度，结合GRDC真实河流数据</div>
+                <div class="region-hint" id="region-hint">选择河流后，起点将自动设置到对应的海域区域</div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>起点位置</h3>
+                <div class="coordinate-row">
+                    <div>
+                        <label for="start-lat">起点纬度 (°N)</label>
+                        <input type="number" id="start-lat" min="52" max="62" step="0.1" value="58.5"/>
+                        <div class="hint">范围：52 – 62</div>
+                        <div class="err" id="lat-err">请输入 52–62 之间的数值</div>
+                    </div>
+                    <div>
+                        <label for="start-lng">起点经度 (°W，填负值)</label>
+                        <input type="number" id="start-lng" min="-175" max="-135" step="0.1" value="-152.5"/>
+                        <div class="hint">范围：-175 – -135（例如 152.5°W 填 -152.5）</div>
+                        <div class="err" id="lng-err">请输入 -175 – -135 之间的数值</div>
+                    </div>
+                </div>
+                <div class="parameter">
+                    <label for="simulation-days">模拟天数</label>
+                    <input type="range" id="simulation-days" min="20" max="120" step="5" value="60"/>
+                    <div class="value-display"><span>20天</span><span id="days-val">60天</span><span>120天</span></div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>多智能体参数</h3>
+                <div class="parameter">
+                    <label for="agent-count">智能体数量</label>
+                    <input type="range" id="agent-count" min="10" max="100" step="10" value="50"/>
+                    <div class="value-display"><span>10</span><span id="agent-count-val">50</span><span>100</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="behavior-variation">行为变异度</label>
+                    <input type="range" id="behavior-variation" min="0" max="1" step="0.1" value="0.3"/>
+                    <div class="value-display"><span>一致</span><span id="behavior-var-val">0.3 (中等)</span><span>高度变异</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="learning-rate">学习能力</label>
+                    <input type="range" id="learning-rate" min="0" max="1" step="0.1" value="0.6"/>
+                    <div class="value-display"><span>无学习</span><span id="learning-val">0.6 (中等)</span><span>强学习</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="exploration-rate">探索倾向</label>
+                    <input type="range" id="exploration-rate" min="0" max="1" step="0.1" value="0.4"/>
+                    <div class="value-display"><span>保守</span><span id="exploration-val">0.4 (中等)</span><span>探索型</span></div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>索饵场参数</h3>
+                <div class="parameter">
+                    <label for="resting-probability">停留概率</label>
+                    <input type="range" id="resting-probability" min="0" max="1" step="0.1" value="0.3"/>
+                    <div class="value-display"><span>0%</span><span id="resting-prob-val">30%</span><span>100%</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="resting-duration">平均停留天数</label>
+                    <input type="range" id="resting-duration" min="1" max="10" step="1" value="3"/>
+                    <div class="value-display"><span>1天</span><span id="resting-dur-val">3天</span><span>10天</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="resting-variation">停留变异度</label>
+                    <input type="range" id="resting-variation" min="0" max="1" step="0.1" value="0.5"/>
+                    <div class="value-display"><span>一致</span><span id="resting-var-val">0.5 (中等)</span><span>高度变异</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="feeding-area-size">索饵场大小</label>
+                    <input type="range" id="feeding-area-size" min="0.2" max="2" step="0.1" value="0.8"/>
+                    <div class="value-display"><span>小</span><span id="feeding-size-val">0.8°</span><span>大</span></div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>海洋环境参数</h3>
+                <div class="parameter">
+                    <label for="temperature">平均水温 (°C)</label>
+                    <input type="range" id="temperature" min="2" max="18" step="0.5" value="8"/>
+                    <div class="value-display"><span>2°C</span><span id="temp-val">8°C</span><span>18°C</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="current">平均洋流速度 (m/s)</label>
+                    <input type="range" id="current" min="0" max="1.5" step="0.1" value="0.3"/>
+                    <div class="value-display"><span>0</span><span id="cur-val">0.3 m/s</span><span>1.5</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="salinity">平均盐度 (PSU)</label>
+                    <input type="range" id="salinity" min="28" max="35" step="0.5" value="32"/>
+                    <div class="value-display"><span>28</span><span id="sal-val">32 PSU</span><span>35</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="env-variation">环境变化强度</label>
+                    <input type="range" id="env-variation" min="0" max="2" step="0.5" value="1"/>
+                    <div class="value-display"><span>固定</span><span id="env-var-val">中等变化</span><span>强烈变化</span></div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>秋鲑生理参数</h3>
+                <div class="parameter">
+                    <label for="fish-size">平均体长 (m)</label>
+                    <input type="range" id="fish-size" min="0.4" max="0.9" step="0.05" value="0.7"/>
+                    <div class="value-display"><span>0.4</span><span id="size-val">0.7 m</span><span>0.9</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="swim-speed">游泳能力 (m/s)</label>
+                    <input type="range" id="swim-speed" min="0.5" max="2.5" step="0.1" value="1.2"/>
+                    <div class="value-display"><span>0.5</span><span id="swim-val">1.2 m/s</span><span>2.5</span></div>
+                </div>
+                <div class="parameter">
+                    <label for="energy">初始能量储备 (%)</label>
+                    <input type="range" id="energy" min="50" max="100" step="5" value="85"/>
+                    <div class="value-display"><span>50%</span><span id="en-val">85%</span><span>100%</span></div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <h3>路径拟合参数</h3>
+                <div class="parameter">
+                    <label for="fitting-method">群体路径拟合方法</label>
+                    <select id="fitting-method">
+                        <option value="mean">均值拟合</option>
+                        <option value="median" selected>中位数拟合</option>
+                        <option value="mode">众数拟合</option>
+                        <option value="weighted">加权平均</option>
+                    </select>
+                </div>
+                <div class="parameter">
+                    <label for="confidence-level">置信区间</label>
+                    <input type="range" id="confidence-level" min="0.5" max="0.95" step="0.05" value="0.8"/>
+                    <div class="value-display"><span>50%</span><span id="confidence-val">80%</span><span>95%</span></div>
+                </div>
+            </div>
+
+            <div class="env-chart-container">
+                <h4>环境参数变化趋势</h4>
+                <div class="env-chart" id="env-chart">
+                    <canvas id="env-chart-canvas"></canvas>
+                </div>
+                <div class="env-chart-legend">
+                    <div class="env-chart-legend-item">
+                        <div class="env-chart-legend-color" style="background:#ff6384"></div>
+                        <span>水温</span>
+                    </div>
+                    <div class="env-chart-legend-item">
+                        <div class="env-chart-legend-color" style="background:#36a2eb"></div>
+                        <span>洋流</span>
+                    </div>
+                    <div class="env-chart-legend-item">
+                        <div class="env-chart-legend-color" style="background:#4bc0c0"></div>
+                        <span>盐度</span>
+                    </div>
+                </div>
+                <div class="env-chart-label">X轴：模拟天数 | Y轴：参数值（标准化）</div>
+            </div>
+
+            <button id="simulate-btn">开始群体模拟</button>
+
+            <div class="statistics-panel" id="stats-panel">
+                <h4>模拟统计信息</h4>
+                <div class="stat-item">
+                    <span class="stat-label">已完成智能体:</span>
+                    <span class="stat-value" id="completed-agents">0/0</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-label">模拟进度</div>
+                    <div class="progress-bar"><div class="progress-fill" id="simulation-progress" style="width:0%;background:#3498db"></div></div>
+                    <div class="progress-value" id="progress-value">0%</div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-label">路径拟合度</div>
+                    <div class="progress-bar"><div class="progress-fill" id="fitting-progress" style="width:0%;background:#2ecc71"></div></div>
+                    <div class="progress-value" id="fitting-value">0%</div>
+                </div>
+                <!-- 新增：停留统计 -->
+                <div class="stat-item">
+                    <span class="stat-label">平均停留次数:</span>
+                    <span class="stat-value" id="avg-resting-count">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均停留天数:</span>
+                    <span class="stat-value" id="avg-resting-days">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">索饵场数量:</span>
+                    <span class="stat-value" id="feeding-area-count">--</span>
+                </div>
+                <!-- 水域优化统计 -->
+                <div class="stat-item">
+                    <span class="stat-label">水域路径优化:</span>
+                    <span class="stat-value" id="water-optimization">--</span>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h4>关于水域优化模拟</h4>
+                <p>本模拟器使用水域节点系统和路径修正机制，使模拟更加符合真实的鲑鱼洄游行为。</p>
+                <div class="data-source-info">
+                    <strong>优化特性：</strong>水域节点引导 + 实时路径修正 + 水域边界检查<br>
+                </div>
+            </div>
+
+            <div class="status-panel" id="data-status">
+                河流数据状态: 正在加载GRDC数据...
+            </div>
+
+            <div class="optimization-info" id="optimization-info">
+                水域优化已启用：使用关键水域节点引导路径，减少陆地穿越概率
+            </div>
+
+            <div class="simulation-info" id="sim-info">
+                点击"开始群体模拟"将并行模拟多个智能体，通过水域优化算法生成更符合实际的洄游路径。
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="layer-control">
+                <h4>图层控制</h4>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-grdc-rivers" checked>
+                    <label for="show-grdc-rivers">显示GRDC河流</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-water-boundaries" checked>
+                    <label for="show-water-boundaries">显示水域边界</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-water-nodes" checked>
+                    <label for="show-water-nodes">显示水域节点</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-water-paths">
+                    <label for="show-water-paths">显示水域参考路径</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-feeding-areas" checked>
+                    <label for="show-feeding-areas">显示索饵场</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-individual-paths" checked>
+                    <label for="show-individual-paths">显示个体路径</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-group-path" checked>
+                    <label for="show-group-path">显示群体路径</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-confidence-interval">
+                    <label for="show-confidence-interval">显示置信区间</label>
+                </div>
+                <div class="layer-option">
+                    <input type="checkbox" id="show-path-density">
+                    <label for="show-path-density">显示路径密度</label>
+                </div>
+            </div>
+            <div class="click-info" id="click-info">
+                <button class="close-btn" id="close-info">×</button>
+                <h4>位置信息</h4>
+                <div id="click-content"></div>
+            </div>
+            <!-- 新增：路径数据面板 -->
+            <div class="path-data-panel" id="path-data-panel">
+                <button class="path-data-close" id="path-data-close">×</button>
+                <h4>群体路径数据</h4>
+                <div id="path-data-content"></div>
+            </div>
+            <div class="legend">
+                <h4>图例</h4>
+                <!-- 修复：将起点颜色改为蓝色 -->
+                <div class="legend-item"><div class="legend-color" style="background:#3388ff"></div><span>洄游起点</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#ff6600"></div><span>群体共识路径</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#ffb380"></div><span>个体路径</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#00aa00"></div><span>河流终点</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#a0c8f0"></div><span>海域区域</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#1e5cb3"></div><span>主要河流</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#4a9cf0"></div><span>次要河流</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#9b59b6"></div><span>索饵场</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#3498db"></div><span>置信区间</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#2ecc71"></div><span>路径密度高</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#f1c40f"></div><span>路径密度中</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#e74c3c"></div><span>路径密度低</span></div>
+                <!-- 新增水域相关图例 -->
+                <div class="legend-item"><div class="legend-color" style="background:#3498db"></div><span>水域节点</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#3498db"></div><span>水域参考路径</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部面板区域 -->
+    <div class="bottom-panels">
+        <div class="bottom-panel">
+            <h3>群体行为统计</h3>
+            <div class="path-dependency-metric">
+                <div class="dependency-name">路径收敛度</div>
+                <div class="metric-value" id="convergence-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="convergence-bar" style="width:0%"></div></div>
+            </div>
+            <div class="path-dependency-metric">
+                <div class="dependency-name">行为一致性</div>
+                <div class="metric-value" id="consistency-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="consistency-bar" style="width:0%"></div></div>
+            </div>
+            <div class="path-dependency-metric">
+                <div class="dependency-name">探索多样性</div>
+                <div class="metric-value" id="diversity-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="diversity-bar" style="width:0%"></div></div>
+            </div>
+            <div class="path-dependency-metric">
+                <div class="dependency-name">路径效率</div>
+                <div class="metric-value" id="efficiency-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="efficiency-bar" style="width:0%"></div></div>
+            </div>
+        </div>
+        
+        <div class="bottom-panel">
+            <h3>模拟精度分析</h3>
+            <div class="accuracy-metric">
+                <div class="metric-name">PFI（路径拟合度）</div>
+                <div class="metric-value" id="pfi-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="pfi-bar" style="width:0%"></div></div>
+            </div>
+            <div class="accuracy-metric">
+                <div class="metric-name">ESI（环境适宜性）</div>
+                <div class="metric-value" id="esi-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="esi-bar" style="width:0%"></div></div>
+            </div>
+            <div class="accuracy-metric">
+                <div class="metric-name">ERS（生态合理性）</div>
+                <div class="metric-value" id="ers-val">--</div>
+                <div class="progress-bar"><div class="progress-fill" id="ers-bar" style="width:0%"></div></div>
+            </div>
+            <div class="accuracy-metric">
+                <div class="metric-name">综合等级</div>
+                <div class="metric-value" id="acc-grade">--</div>
+            </div>
+        </div>
+        
+        <div class="bottom-panel">
+            <h3>统计详情</h3>
+            <div id="detailed-results">
+                <div class="stat-item">
+                    <span class="stat-label">模拟智能体总数:</span>
+                    <span class="stat-value" id="total-agents">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">成功到达终点:</span>
+                    <span class="stat-value" id="successful-agents">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均路径长度:</span>
+                    <span class="stat-value" id="avg-path-length">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">路径长度标准差:</span>
+                    <span class="stat-value" id="path-std">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">拟合置信度:</span>
+                    <span class="stat-value" id="fitting-confidence">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- 使用更稳定的Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+// 修复：确保所有面板都能正确更新
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化地图
+    initMap();
+    initEnvChart();
+    syncDisplays();
+    updateStartForRiver(params.riverId); // 初始化起点
+});
+
+/* --- 地图初始化与底图 --- */
+let map, mapReady=false, currentBase='satellite', routeLayers=[], clickMarkers=[];
+let grdcRiverLayer, waterBoundariesLayer, feedingAreasLayer, individualPathLayer, groupPathLayer, confidenceLayer, densityLayer, waterNodesLayer, waterPathsLayer;
+
+// 更新底图层：移除地形图，修复水域图使用更稳定的图源
+const baseLayers={
+    satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+        attribution:'Tiles © Esri',
+        maxZoom:18
+    }),
+    dark:L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+        attribution:'© OSM & CARTO',
+        maxZoom:18
+    }),
+    // 使用更稳定的水域图源
+    water:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',{
+        attribution:'Tiles © Esri',
+        maxZoom:13
+    })
+};
+
+function initMap(){
+    map=L.map('map').setView([60,-152],5);
+    baseLayers.satellite.addTo(map); // 默认使用卫星图
+    
+    // 创建图层组
+    grdcRiverLayer = L.layerGroup().addTo(map);
+    waterBoundariesLayer = L.layerGroup().addTo(map);
+    feedingAreasLayer = L.layerGroup().addTo(map);
+    individualPathLayer = L.layerGroup().addTo(map);
+    groupPathLayer = L.layerGroup().addTo(map);
+    confidenceLayer = L.layerGroup().addTo(map);
+    densityLayer = L.layerGroup().addTo(map);
+    waterNodesLayer = L.layerGroup().addTo(map);
+    waterPathsLayer = L.layerGroup().addTo(map);
+    
+    mapReady=true;
+    
+    // 加载GRDC河流数据
+    loadGRDCRivers();
+}
+
+/* --- 水域节点系统 - 定义阿拉斯加关键水域通道 --- */
+const waterNodes = {
+  // 白令海关键水域节点
+  bering_sea_nodes: [
+    {id: 'bs1', name: '白令海中部', lat: 60.0, lng: -175.0, type: 'start_region'},
+    {id: 'bs2', name: '诺顿湾入口', lat: 64.5, lng: -165.0, type: 'channel'},
+    {id: 'bs3', name: '育空河口海域', lat: 62.5, lng: -165.0, type: 'estuary'},
+    {id: 'bs4', name: '布里斯托尔湾', lat: 58.5, lng: -162.0, type: 'bay'}
+  ],
+  
+  // 阿拉斯加湾关键水域节点
+  gulf_alaska_nodes: [
+    {id: 'ga1', name: '阿拉斯加湾中部', lat: 58.0, lng: -145.0, type: 'start_region'},
+    {id: 'ga2', name: '科珀河口海域', lat: 60.5, lng: -145.0, type: 'estuary'},
+    {id: 'ga3', name: '威廉王子湾', lat: 60.5, lng: -147.0, type: 'bay'},
+    {id: 'ga4', name: '库克湾入口', lat: 59.5, lng: -151.0, type: 'channel'}
+  ],
+  
+  // 公共水域通道（连接不同海域）
+  common_channels: [
+    {id: 'cc1', name: '乌尼马克通道', lat: 54.5, lng: -164.5, type: 'strait'},
+    {id: 'cc2', name: '阿拉斯加半岛南', lat: 55.0, lng: -162.0, type: 'coastal'}
+  ]
+};
+
+// 水域边界多边形（简化版）
+const waterBoundaries = {
+  bering_sea: [
+    [58, -179], [65, -179], [67, -168], [67, -160], [60, -160], [58, -168]
+  ],
+  gulf_alaska: [
+    [58, -152], [62, -152], [62, -135], [58, -135]
+  ]
+};
+
+// 检查点是否在水域内
+function isPointInWater(lat, lng, regionId) {
+  // 简化检查：使用预定义的水域边界
+  const region = waterBoundaries[regionId];
+  if (!region) return true; // 如果没有区域数据，默认允许
+  
+  // 简单的矩形检查（实际应该使用多边形包含算法）
+  const bounds = getRegionBounds(regionId);
+  return lat >= bounds.minLat && lat <= bounds.maxLat && 
+         lng >= bounds.minLng && lng <= bounds.maxLng;
+}
+
+// 获取区域边界
+function getRegionBounds(regionId) {
+  const regions = {
+    bering_sea: { minLat: 58, maxLat: 67, minLng: -179, maxLng: -160 },
+    gulf_alaska: { minLat: 58, maxLat: 62, minLng: -152, maxLng: -135 }
+  };
+  return regions[regionId] || { minLat: 52, maxLat: 67, minLng: -179, maxLng: -135 };
+}
+
+// 寻找最近的水域节点
+function findNearestWaterNode(lat, lng, regionId) {
+  const nodes = [...waterNodes[`${regionId}_nodes`], ...waterNodes.common_channels];
+  let nearestNode = null;
+  let minDistance = Infinity;
+  
+  nodes.forEach(node => {
+    const distance = haversine([lat, lng], [node.lat, node.lng]);
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestNode = node;
+    }
+  });
+  
+  return nearestNode;
+}
+
+// 水域路径规划器
+class WaterPathPlanner {
+  constructor(start, end, regionId) {
+    this.start = start;
+    this.end = end;
+    this.regionId = regionId;
+    this.keyNodes = this.findKeyPathNodes();
+  }
+  
+  // 寻找关键路径节点
+  findKeyPathNodes() {
+    const nodes = [];
+    
+    // 添加起点附近的水域节点
+    const startNode = findNearestWaterNode(this.start[0], this.start[1], this.regionId);
+    if (startNode) nodes.push(startNode);
+    
+    // 添加终点附近的水域节点
+    const endNode = findNearestWaterNode(this.end[0], this.end[1], this.regionId);
+    if (endNode && endNode.id !== startNode?.id) nodes.push(endNode);
+    
+    // 添加路径中间的关键节点
+    const midLat = (this.start[0] + this.end[0]) / 2;
+    const midLng = (this.start[1] + this.end[1]) / 2;
+    const midNode = findNearestWaterNode(midLat, midLng, this.regionId);
+    if (midNode && !nodes.find(n => n.id === midNode.id)) nodes.push(midNode);
+    
+    return nodes;
+  }
+  
+  // 生成水域优化路径
+  generateWaterOptimizedPath() {
+    const path = [this.start];
+    
+    // 添加关键节点
+    this.keyNodes.forEach(node => {
+      path.push([node.lat, node.lng]);
+    });
+    
+    path.push(this.end);
+    
+    // 路径平滑和优化
+    return this.optimizePath(path);
+  }
+  
+  // 优化路径，确保在水域内
+  optimizePath(roughPath) {
+    const optimizedPath = [roughPath[0]];
+    
+    for (let i = 1; i < roughPath.length; i++) {
+      const prevPoint = optimizedPath[optimizedPath.length - 1];
+      const currentPoint = roughPath[i];
+      
+      // 检查直线路径是否穿越陆地
+      if (this.isPathCrossingLand(prevPoint, currentPoint)) {
+        // 如果穿越陆地，添加绕行点
+        const detourPoints = this.generateDetourPath(prevPoint, currentPoint);
+        optimizedPath.push(...detourPoints);
+      } else {
+        optimizedPath.push(currentPoint);
+      }
+    }
+    
+    return optimizedPath;
+  }
+  
+  // 检查路径是否穿越陆地（简化版）
+  isPathCrossingLand(pointA, pointB) {
+    // 简化检查：计算中间点并检查是否在水域外
+    const midLat = (pointA[0] + pointB[0]) / 2;
+    const midLng = (pointA[1] + pointB[1]) / 2;
+    
+    return !isPointInWater(midLat, midLng, this.regionId);
+  }
+  
+  // 生成绕行路径
+  generateDetourPath(pointA, pointB) {
+    const detourPoints = [];
+    const distance = haversine(pointA, pointB);
+    
+    // 寻找绕行方向（偏向水域中心）
+    const centerLat = (pointA[0] + pointB[0]) / 2;
+    const centerLng = (pointA[1] + pointB[1]) / 2;
+    
+    // 计算垂直方向（避免直线穿越）
+    const dLat = pointB[0] - pointA[0];
+    const dLng = pointB[1] - pointA[1];
+    
+    // 垂直向量（顺时针和逆时针各一个）
+    const perpendicular1 = [-dLng, dLat];
+    const perpendicular2 = [dLng, -dLat];
+    
+    // 归一化
+    const length1 = Math.sqrt(perpendicular1[0]**2 + perpendicular1[1]**2);
+    const length2 = Math.sqrt(perpendicular2[0]**2 + perpendicular2[1]**2);
+    
+    const norm1 = [perpendicular1[0]/length1, perpendicular1[1]/length1];
+    const norm2 = [perpendicular2[0]/length2, perpendicular2[1]/length2];
+    
+    // 选择偏向水域的方向
+    const detourDirection = this.chooseWaterDirection(centerLat, centerLng, norm1, norm2);
+    
+    // 生成绕行点
+    const detourDistance = distance * 0.3; // 绕行距离为直线距离的30%
+    const detourPoint = [
+      centerLat + detourDirection[0] * detourDistance / 111,
+      centerLng + detourDirection[1] * detourDistance / (111 * Math.cos(centerLat * Math.PI / 180))
+    ];
+    
+    // 确保绕行点在水域内
+    if (isPointInWater(detourPoint[0], detourPoint[1], this.regionId)) {
+      detourPoints.push(detourPoint);
+    } else {
+      // 如果不在水域内，使用原始中点
+      detourPoints.push([centerLat, centerLng]);
+    }
+    
+    return detourPoints;
+  }
+  
+  // 选择偏向水域的方向
+  chooseWaterDirection(centerLat, centerLng, dir1, dir2) {
+    // 测试两个方向的水域适宜性
+    const testDistance = 1.0; // 测试距离1度
+    
+    const testPoint1 = [
+      centerLat + dir1[0] * testDistance,
+      centerLng + dir1[1] * testDistance
+    ];
+    
+    const testPoint2 = [
+      centerLat + dir2[0] * testDistance,
+      centerLng + dir2[1] * testDistance
+    ];
+    
+    const waterScore1 = this.calculateWaterScore(testPoint1[0], testPoint1[1]);
+    const waterScore2 = this.calculateWaterScore(testPoint2[0], testPoint2[1]);
+    
+    return waterScore1 > waterScore2 ? dir1 : dir2;
+  }
+  
+  // 计算水域得分（简化版）
+  calculateWaterScore(lat, lng) {
+    let score = 0;
+    
+    // 检查是否在主要水域边界内
+    if (isPointInWater(lat, lng, this.regionId)) {
+      score += 2;
+    }
+    
+    // 靠近已知水域节点加分
+    const nearestNode = findNearestWaterNode(lat, lng, this.regionId);
+    if (nearestNode) {
+      const distance = haversine([lat, lng], [nearestNode.lat, nearestNode.lng]);
+      score += Math.max(0, 1 - distance / 5); // 5度内有效
+    }
+    
+    return score;
+  }
+}
+
+/* --- 加载GRDC河流数据 --- */
+function loadGRDCRivers() {
+    try {
+        // 使用预处理的GRDC数据
+        document.getElementById('data-status').textContent = "河流数据状态: 正在加载预处理GRDC数据";
+        loadPreprocessedGRDC();
+    } catch (error) {
+        console.error('Error loading GRDC data:', error);
+        document.getElementById('data-status').textContent = "河流数据状态: 加载失败 - 使用基础河流数据";
+        loadBasicRivers();
+    }
+}
+
+/* --- 根据河流等级获取颜色 --- */
+function getRiverColor(order) {
+    switch(order) {
+        case 1: return '#4a9cf0'; // 一级河流 - 浅蓝
+        case 2: return '#2a75d6'; // 二级河流 - 中蓝
+        case 3: return '#1e5cb3'; // 三级河流 - 深蓝
+        case 4: return '#15478f'; // 四级河流 - 更深蓝
+        case 5: return '#0d3d7a'; // 五级河流 - 海军蓝
+        default: return '#1e5cb3'; // 默认颜色
+    }
+}
+
+/* --- 预处理GRDC数据（备选方案） --- */
+function loadPreprocessedGRDC() {
+    // 基于GRDC数据的预处理阿拉斯加河流
+    const alaskaRivers = getAlaskaGRDCRivers();
+    
+    // 创建河流图层
+    alaskaRivers.forEach(river => {
+        const riverLine = L.polyline(river.coordinates, {
+            color: getRiverColor(river.order),
+            weight: Math.min(6, Math.max(1, river.order)),
+            opacity: 0.7 + (river.order * 0.05),
+            className: 'grdc-river'
+        }).bindPopup(`
+            <b>${river.name}</b><br>
+            等级: ${river.order}<br>
+            长度: ${river.length} km
+        `);
+        
+        grdcRiverLayer.addLayer(riverLine);
+    });
+    
+    // 绘制水域边界
+    drawWaterBoundaries();
+    
+    document.getElementById('data-status').textContent = `河流数据状态: 已加载预处理GRDC数据 (${alaskaRivers.length}条河流)`;
+}
+
+/* --- 预处理GRDC阿拉斯加河流数据 --- */
+function getAlaskaGRDCRivers() {
+    // 基于GRDC数据的阿拉斯加主要河流
+    return [
+        {
+            name: "育空河 Yukon River",
+            order: 5,
+            length: 3185,
+            coordinates: [
+                [62.5, -165.0], [62.6, -164.8], [62.7, -164.5], [62.8, -164.3],
+                [62.9, -164.0], [63.0, -163.7], [63.1, -163.4], [63.2, -163.1],
+                [63.3, -162.8], [63.4, -162.5], [63.5, -162.2], [63.6, -161.9],
+                [63.7, -161.6], [63.8, -161.3], [63.9, -161.0], [64.0, -160.7],
+                [64.1, -160.4], [64.2, -160.1], [64.3, -159.8], [64.4, -159.5],
+                [64.5, -159.2], [64.6, -158.9], [64.7, -158.6], [64.8, -158.3],
+                [64.9, -158.0], [65.0, -157.7], [65.1, -157.4], [65.2, -157.1],
+                [65.3, -156.8], [65.4, -156.5], [65.5, -156.2], [65.6, -155.9],
+                [65.7, -155.6], [65.8, -155.3], [65.9, -155.0], [66.0, -154.7],
+                [66.1, -154.4], [66.2, -154.1], [66.3, -153.8], [66.4, -153.5],
+                [66.5, -153.2], [66.6, -152.9], [66.7, -152.6], [66.8, -152.3],
+                [66.9, -152.0], [67.0, -151.7], [67.1, -151.4], [67.2, -151.1]
+            ]
+        },
+        {
+            name: "卡斯科奎姆河 Kuskokwim River",
+            order: 4,
+            length: 1130,
+            coordinates: [
+                [60.0, -162.0], [60.1, -161.8], [60.2, -161.6], [60.3, -161.4],
+                [60.4, -161.2], [60.5, -161.0], [60.6, -160.8], [60.7, -160.6],
+                [60.8, -160.4], [60.9, -160.2], [61.0, -160.0], [61.1, -159.8],
+                [61.2, -159.6], [61.3, -159.4], [61.4, -159.2], [61.5, -159.0],
+                [61.6, -158.8], [61.7, -158.6], [61.8, -158.4], [61.9, -158.2],
+                [62.0, -158.0], [62.1, -157.8], [62.2, -157.6], [62.3, -157.4],
+                [62.4, -157.2], [62.5, -157.0], [62.6, -156.8], [62.7, -156.6]
+            ]
+        },
+        {
+            name: "科珀河 Copper River",
+            order: 4,
+            length: 460,
+            coordinates: [
+                [60.5, -145.0], [60.6, -144.9], [60.7, -144.8], [60.8, -144.7],
+                [60.9, -144.6], [61.0, -144.5], [61.1, -144.4], [61.2, -144.3],
+                [61.3, -144.2], [61.4, -144.1], [61.5, -144.0], [61.6, -143.9],
+                [61.7, -143.8], [61.8, -143.7], [61.9, -143.6], [62.0, -143.5],
+                [62.1, -143.4], [62.2, -143.3], [62.3, -143.2], [62.4, -143.1]
+            ]
+        },
+        {
+            name: "苏西特纳河 Susitna River",
+            order: 3,
+            length: 504,
+            coordinates: [
+                [61.0, -150.0], [61.1, -149.9], [61.2, -149.8], [61.3, -149.7],
+                [61.4, -149.6], [61.5, -149.5], [61.6, -149.4], [61.7, -149.3],
+                [61.8, -149.2], [61.9, -149.1], [62.0, -149.0], [62.1, -148.9],
+                [62.2, -148.8], [62.3, -148.7], [62.4, -148.6], [62.5, -148.5]
+            ]
+        },
+        {
+            name: "塔纳诺河 Tanana River",
+            order: 4,
+            length: 940,
+            coordinates: [
+                [65.0, -152.0], [65.1, -151.8], [65.2, -151.6], [65.3, -151.4],
+                [65.4, -151.2], [65.5, -151.0], [65.6, -150.8], [65.7, -150.6],
+                [65.8, -150.4], [65.9, -150.2], [66.0, -150.0], [66.1, -149.8],
+                [66.2, -149.6], [66.3, -149.4], [66.4, -149.2], [66.5, -149.0],
+                [66.6, -148.8], [66.7, -148.6], [66.8, -148.4], [66.9, -148.2]
+            ]
+        },
+        {
+            name: "诺阿塔克河 Noatak River",
+            order: 3,
+            length: 684,
+            coordinates: [
+                [67.0, -162.0], [67.1, -161.8], [67.2, -161.6], [67.3, -161.4],
+                [67.4, -161.2], [67.5, -161.0], [67.6, -160.8], [67.7, -160.6],
+                [67.8, -160.4], [67.9, -160.2], [68.0, -160.0], [68.1, -159.8],
+                [68.2, -159.6], [68.3, -159.4], [68.4, -159.2], [68.5, -159.0]
+            ]
+        },
+        {
+            name: "科尔维尔河 Colville River",
+            order: 3,
+            length: 600,
+            coordinates: [
+                [68.5, -158.0], [68.6, -157.8], [68.7, -157.6], [68.8, -157.4],
+                [68.9, -157.2], [69.0, -157.0], [69.1, -156.8], [69.2, -156.6],
+                [69.3, -156.4], [69.4, -156.2], [69.5, -156.0], [69.6, -155.8],
+                [69.7, -155.6], [69.8, -155.4], [69.9, -155.2], [70.0, -155.0]
+            ]
+        },
+        {
+            name: "安德烈亚夫斯基河 Andreafsky River",
+            order: 2,
+            length: 120,
+            coordinates: [
+                [62.1, -162.8], [62.2, -162.7], [62.3, -162.6], [62.4, -162.5],
+                [62.5, -162.4], [62.6, -162.3], [62.7, -162.2], [62.8, -162.1],
+                [62.9, -162.0], [63.0, -161.9], [63.1, -161.8], [63.2, -161.7],
+                [63.3, -161.6]
+            ]
+        },
+        {
+            name: "安维克河 Anvik River",
+            order: 2,
+            length: 140,
+            coordinates: [
+                [62.9, -160.7], [63.0, -160.6], [63.1, -160.5], [63.2, -160.4],
+                [63.3, -160.3], [63.4, -160.2], [63.5, -160.1], [63.6, -160.0],
+                [63.7, -159.9]
+            ]
+        }
+    ];
+}
+
+/* --- 基础河流数据备选方案 --- */
+function loadBasicRivers() {
+    // 简化的河流数据作为备选
+    const basicRivers = [
+        {
+            name: "育空河 Yukon River",
+            coordinates: [
+                [62.5, -165.0], [63.5, -162.0], [64.5, -159.0], [65.5, -156.0], [66.5, -153.0], [67.5, -150.0]
+            ]
+        },
+        {
+            name: "卡斯科奎姆河 Kuskokwim River",
+            coordinates: [
+                [60.0, -162.0], [61.0, -160.0], [62.0, -158.0], [63.0, -156.0]
+            ]
+        },
+        {
+            name: "科珀河 Copper River",
+            coordinates: [
+                [60.5, -145.0], [61.5, -144.0], [62.5, -143.0]
+            ]
+        }
+    ];
+    
+    basicRivers.forEach(river => {
+        const riverLine = L.polyline(river.coordinates, {
+            color: '#1e90ff',
+            weight: 3,
+            opacity: 0.7
+        }).bindPopup(river.name);
+        
+        grdcRiverLayer.addLayer(riverLine);
+    });
+    
+    document.getElementById('data-status').textContent = "河流数据状态: 已加载基础河流数据";
+}
+
+/* --- 绘制水域边界 --- */
+function drawWaterBoundaries() {
+    if (!document.getElementById('show-water-boundaries').checked) return;
+    
+    // 白令海区域
+    const beringSeaBounds = [
+        [58, -175],
+        [67, -160]
+    ];
+    
+    const beringSeaRect = L.rectangle(beringSeaBounds, {
+        className: 'water-boundary',
+        fillOpacity: 0.1,
+        weight: 1,
+        color: '#1e5799',
+        dashArray: '5,5'
+    }).addTo(waterBoundariesLayer);
+    
+    // 阿拉斯加湾区域
+    const gulfAlaskaBounds = [
+        [58, -152],
+        [62, -135]
+    ];
+    
+    const gulfAlaskaRect = L.rectangle(gulfAlaskaBounds, {
+        className: 'water-boundary',
+        fillOpacity: 0.1,
+        weight: 1,
+        color: '#1e5799',
+        dashArray: '5,5'
+    }).addTo(waterBoundariesLayer);
+    
+    // 添加水域节点标记
+    if (document.getElementById('show-water-nodes').checked) {
+        Object.values(waterNodes).forEach(nodeGroup => {
+            nodeGroup.forEach(node => {
+                const marker = L.circleMarker([node.lat, node.lng], {
+                    radius: 6,
+                    fillColor: '#3498db',
+                    color: '#1e5799',
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.6,
+                    className: 'water-node-marker'
+                }).bindTooltip(`${node.name} (${node.type})`, {permanent: false});
+                
+                waterNodesLayer.addLayer(marker);
+            });
+        });
+    }
+    
+    // 添加标签
+    const beringSeaLabel = L.marker([62.5, -167.5]).addTo(waterBoundariesLayer);
+    beringSeaLabel.bindTooltip("白令海区域", {permanent: true, className: 'water-label', direction: 'center'});
+    
+    const gulfAlaskaLabel = L.marker([60, -143.5]).addTo(waterBoundariesLayer);
+    gulfAlaskaLabel.bindTooltip("阿拉斯加湾区域", {permanent: true, className: 'water-label', direction: 'center'});
+}
+
+/* --- 动态索饵场系统 --- */
+class DynamicFeedingAreas {
+    constructor() {
+        this.areas = [];
+        this.areaSize = params.feedingAreaSize || 0.8;
+    }
+    
+    // 根据群体路径识别索饵场
+    identifyFeedingAreas(groupPath, agents) {
+        this.areas = [];
+        
+        if (!groupPath || groupPath.length < 10) return [];
+        
+        // 计算路径上每个点的停留密度
+        const densityMap = this.calculatePathDensity(groupPath, agents);
+        
+        // 识别高密度区域作为索饵场候选
+        const candidateAreas = this.findHighDensityAreas(densityMap);
+        
+        // 合并相邻的候选区域
+        this.areas = this.mergeAdjacentAreas(candidateAreas);
+        
+        return this.areas;
+    }
+    
+    // 计算路径密度
+    calculatePathDensity(groupPath, agents) {
+        const densityMap = {};
+        const gridSize = this.areaSize / 2; // 使用更小的网格进行密度计算
+        
+        // 获取成功到达的智能体
+        const successfulAgents = agents.filter(a => a.success);
+        
+        // 统计每个网格的停留次数
+        successfulAgents.forEach(agent => {
+            agent.path.forEach((point, index) => {
+                // 检查是否在停留状态
+                if (agent.restingPoints && agent.restingPoints.includes(index)) {
+                    const gridKey = this.getGridKey(point, gridSize);
+                    densityMap[gridKey] = (densityMap[gridKey] || 0) + 1;
+                }
+            });
+        });
+        
+        return densityMap;
+    }
+    
+    // 获取网格键
+    getGridKey(point, gridSize) {
+        const latGrid = Math.floor(point[0] / gridSize) * gridSize;
+        const lngGrid = Math.floor(point[1] / gridSize) * gridSize;
+        return `${latGrid},${lngGrid}`;
+    }
+    
+    // 寻找高密度区域
+    findHighDensityAreas(densityMap) {
+        const areas = [];
+        const minDensity = params.agentCount * 0.1; // 最小密度阈值
+        
+        Object.entries(densityMap).forEach(([key, density]) => {
+            if (density >= minDensity) {
+                const [lat, lng] = key.split(',').map(Number);
+                areas.push({
+                    center: [lat + this.areaSize/2, lng + this.areaSize/2],
+                    bounds: [
+                        [lat, lng],
+                        [lat + this.areaSize, lng + this.areaSize]
+                    ],
+                    density: density
+                });
+            }
+        });
+        
+        return areas;
+    }
+    
+    // 合并相邻区域
+    mergeAdjacentAreas(areas) {
+        if (areas.length <= 1) return areas;
+        
+        const merged = [];
+        const used = new Set();
+        
+        for (let i = 0; i < areas.length; i++) {
+            if (used.has(i)) continue;
+            
+            let currentArea = areas[i];
+            used.add(i);
+            
+            // 寻找相邻区域
+            for (let j = i + 1; j < areas.length; j++) {
+                if (used.has(j)) continue;
+                
+                if (this.areAreasAdjacent(currentArea, areas[j])) {
+                    currentArea = this.mergeTwoAreas(currentArea, areas[j]);
+                    used.add(j);
+                }
+            }
+            
+            merged.push(currentArea);
+        }
+        
+        return merged;
+    }
+    
+    // 检查两个区域是否相邻
+    areAreasAdjacent(area1, area2) {
+        const [lat1Min, lng1Min] = area1.bounds[0];
+        const [lat1Max, lng1Max] = area1.bounds[1];
+        const [lat2Min, lng2Min] = area2.bounds[0];
+        const [lat2Max, lng2Max] = area2.bounds[1];
+        
+        // 检查是否有重叠或相邻
+        const latOverlap = (lat1Min <= lat2Max && lat1Max >= lat2Min);
+        const lngOverlap = (lng1Min <= lng2Max && lng1Max >= lng2Min);
+        
+        return latOverlap && lngOverlap;
+    }
+    
+    // 合并两个区域
+    mergeTwoAreas(area1, area2) {
+        const [lat1Min, lng1Min] = area1.bounds[0];
+        const [lat1Max, lng1Max] = area1.bounds[1];
+        const [lat2Min, lng2Min] = area2.bounds[0];
+        const [lat2Max, lng2Max] = area2.bounds[1];
+        
+        const mergedBounds = [
+            [Math.min(lat1Min, lat2Min), Math.min(lng1Min, lng2Min)],
+            [Math.max(lat1Max, lat2Max), Math.max(lng1Max, lng2Max)]
+        ];
+        
+        const mergedCenter = [
+            (mergedBounds[0][0] + mergedBounds[1][0]) / 2,
+            (mergedBounds[0][1] + mergedBounds[1][1]) / 2
+        ];
+        
+        return {
+            center: mergedCenter,
+            bounds: mergedBounds,
+            density: area1.density + area2.density
+        };
+    }
+    
+    // 绘制索饵场
+    drawFeedingAreas() {
+        feedingAreasLayer.clearLayers();
+        
+        if (!document.getElementById('show-feeding-areas').checked) return;
+        
+        this.areas.forEach((area, index) => {
+            const rect = L.rectangle(area.bounds, {
+                className: 'feeding-area',
+                fillColor: '#9b59b6',
+                fillOpacity: 0.15,
+                weight: 2,
+                color: '#9b59b6',
+                dashArray: '5,5'
+            }).bindPopup(`
+                <b>索饵场 ${index + 1}</b><br>
+                停留密度: ${area.density}<br>
+                大小: ${(area.bounds[1][0] - area.bounds[0][0]).toFixed(2)}° × ${(area.bounds[1][1] - area.bounds[0][1]).toFixed(2)}°
+            `).addTo(feedingAreasLayer);
+            
+            // 添加索饵场标签
+            const label = L.marker(area.center, {
+                icon: L.divIcon({
+                    className: 'feeding-area-marker',
+                    html: `<div style="background:#9b59b6;color:white;padding:2px 6px;border-radius:3px;font-size:10px;border:1px solid white">索饵场 ${index + 1}</div>`,
+                    iconSize: [80, 20]
+                })
+            }).addTo(feedingAreasLayer);
+        });
+    }
+}
+
+/* --- 河流数据与海域区域划分 --- */
+const rivers = [
+    {id:'andreafsky_east', name:'Andreafsky River (East Fork)', lat:62.1494, lng:-162.8009, region:'bering_sea'},
+    {id:'anvik',            name:'Anvik River',                   lat:62.9672, lng:-160.7075, region:'bering_sea'},
+    {id:'gisasa',           name:'Gisasa River',                  lat:65.2373, lng:-157.7509, region:'bering_sea'},
+    {id:'henshaw',          name:'Henshaw Creek',                 lat:66.5578, lng:-152.2164, region:'bering_sea'},
+    {id:'chena',            name:'Chena River',                   lat:64.8240, lng:-147.2763, region:'gulf_alaska'},
+    {id:'salcha',           name:'Salcha River',                  lat:64.4825, lng:-146.6785, region:'gulf_alaska'},
+    {id:'glacial_lake',     name:'Glacial Lake',                  lat:64.8664, lng:-165.6997, region:'bering_sea'},
+    {id:'nome',             name:'Nome River',                    lat:64.4968, lng:-165.2188, region:'bering_sea'},
+    {id:'eldorado',         name:'Eldorado River',                lat:64.5735, lng:-164.9373, region:'bering_sea'},
+    {id:'fish',             name:'Fish River',                    lat:64.7590, lng:-163.4609, region:'bering_sea'},
+    {id:'kwethluk',         name:'Kwethluk River',                lat:60.3265, lng:-160.8528, region:'bering_sea'},
+    {id:'inglutalik',       name:'Inglutalik River',              lat:64.8202, lng:-160.6244, region:'bering_sea'},
+    {id:'north',            name:'North River',                   lat:63.8877, lng:-160.6577, region:'bering_sea'},
+    {id:'goodnews_mid',     name:'Goodnews River (Middle Fork)',  lat:59.1599, lng:-160.6119, region:'bering_sea'}
+];
+
+// 海域区域定义 - 每个区域包含推荐的起点范围和默认起点
+const seaRegions = {
+    bering_sea: {
+        name: "白令海区域",
+        bounds: {minLat: 58, maxLat: 67, minLng: -175, maxLng: -160},
+        defaultStart: [60.5, -168.0],
+        color: '#a0c8f0',
+        envProfile: {
+            tempRange: [4, 12],    // 温度范围 [min, max]
+            currentRange: [0.1, 0.8], // 洋流范围
+            salinityRange: [30, 34] // 盐度范围
+        }
+    },
+    gulf_alaska: {
+        name: "阿拉斯加湾区域",
+        bounds: {minLat: 58, maxLat: 62, minLng: -152, maxLng: -135},
+        defaultStart: [59.5, -145.0],
+        color: '#a0c8f0',
+        envProfile: {
+            tempRange: [6, 14],
+            currentRange: [0.2, 1.2],
+            salinityRange: [29, 33]
+        }
+    }
+};
+
+// 河流与海域区域的映射
+const riverToRegion = {};
+rivers.forEach(river => {
+    riverToRegion[river.id] = river.region;
+});
+
+// 下拉注入
+const riverSelect = document.getElementById('river-select');
+rivers.forEach(r=>{
+    const opt=document.createElement('option');
+    opt.value=r.id; opt.textContent=r.name;
+    riverSelect.appendChild(opt);
+});
+riverSelect.value='andreafsky_east';
+
+/* --- 参数状态 --- */
+const bounds={minLat:52,maxLat:62,minLng:-175,maxLng:-135};
+let params={
+    startLat:58.5,startLng:-152.5,days:60,
+    temp:8, cur:0.3, sal:32,
+    size:0.7, swim:1.2, energy:85,
+    riverId:riverSelect.value,
+    envVariation:1,
+    agentCount: 50,
+    behaviorVariation: 0.3,
+    learningRate: 0.6,
+    explorationRate: 0.4,
+    fittingMethod: 'median',
+    confidenceLevel: 0.8,
+    restingProbability: 0.3,
+    restingDuration: 3,
+    restingVariation: 0.5,
+    feedingAreaSize: 0.8
+};
+
+/* --- 多智能体模拟系统 --- */
+class Agent {
+    constructor(id, start, end, days, regionId, variation) {
+        this.id = id;
+        this.start = [...start];
+        this.end = [...end];
+        this.days = days;
+        this.regionId = regionId;
+        this.variation = variation; // 行为变异度
+        this.learningRate = params.learningRate;
+        this.explorationRate = params.explorationRate;
+        
+        // 个体特征
+        this.size = params.size * (0.9 + variation * 0.2); // 体长变异
+        this.swimSpeed = params.swim * (0.8 + variation * 0.4); // 游泳能力变异
+        this.energy = params.energy * (0.7 + variation * 0.6); // 能量储备变异
+        
+        // 停留相关属性
+        this.restingCount = 0;
+        this.totalRestingDays = 0;
+        this.currentRestingDays = 0;
+        this.isResting = false;
+        this.restingPoints = []; // 记录停留点的索引
+        
+        // 水域优化相关属性
+        this.waterCorrections = 0;
+        this.landCrossings = 0;
+        
+        this.path = [];
+        this.envData = [];
+        this.success = false;
+        this.simulationTime = 0;
+    }
+    
+    // 模拟个体洄游
+    simulate() {
+        const startTime = performance.now();
+        
+        try {
+            const result = this.generateIndividualPath();
+            this.path = result.path;
+            this.envData = result.envData;
+            this.success = this.checkSuccess();
+        } catch (error) {
+            console.error(`Agent ${this.id} simulation failed:`, error);
+            this.success = false;
+        }
+        
+        this.simulationTime = performance.now() - startTime;
+        return this;
+    }
+    
+    // 检查是否在潜在索饵场
+    checkPotentialFeedingArea(position, progress) {
+        // 基于环境条件和位置判断是否为潜在索饵场
+        const distanceFromStart = haversine(this.start, position);
+        const totalDistance = haversine(this.start, this.end);
+        const progressRatio = distanceFromStart / totalDistance;
+        
+        // 索饵场更可能出现在洄游的中段
+        if (progressRatio < 0.2 || progressRatio > 0.8) return false;
+        
+        // 基于环境适宜性判断
+        const envSuitability = this.calculateEnvSuitability(position);
+        
+        // 基于随机因素（模拟鱼类对食物分布的感知）
+        const randomFactor = Math.random();
+        
+        // 综合判断
+        const suitability = envSuitability * 0.6 + (1 - progressRatio * 0.5) * 0.4;
+        
+        return suitability > 0.5 && randomFactor < params.restingProbability;
+    }
+    
+    // 计算环境适宜性
+    calculateEnvSuitability(position) {
+        // 简化的环境适宜性模型
+        // 在真实应用中，这里可以集成更多的环境数据
+        const lat = position[0];
+        const lng = position[1];
+        
+        // 模拟一些适宜区域（例如：特定纬度范围、靠近海岸等）
+        let suitability = 0;
+        
+        // 海岸线附近更适宜
+        const distanceFromCoast = this.estimateDistanceFromCoast(lat, lng);
+        if (distanceFromCoast < 2) suitability += 0.4;
+        
+        // 特定温度范围更适宜
+        if (params.temp >= 6 && params.temp <= 12) suitability += 0.3;
+        
+        // 中等洋流速度更适宜
+        if (params.cur >= 0.2 && params.cur <= 0.6) suitability += 0.3;
+        
+        return Math.min(1, suitability);
+    }
+    
+    // 估算距离海岸的距离（简化版）
+    estimateDistanceFromCoast(lat, lng) {
+        // 简化的海岸距离估算
+        // 在真实应用中，这里应该使用海岸线数据
+        const knownCoastPoints = [
+            [58, -152], [59, -150], [60, -148], [61, -146],
+            [62, -160], [63, -162], [64, -164], [65, -166]
+        ];
+        
+        let minDistance = Infinity;
+        knownCoastPoints.forEach(point => {
+            const distance = haversine([lat, lng], point);
+            if (distance < minDistance) minDistance = distance;
+        });
+        
+        return minDistance;
+    }
+    
+    // 决定是否停留
+    decideToRest(position, progress, day) {
+        // 如果已经在停留，继续停留
+        if (this.isResting) {
+            return true;
+        }
+        
+        // 检查是否为潜在索饵场
+        if (!this.checkPotentialFeedingArea(position, progress)) {
+            return false;
+        }
+        
+        // 计算停留概率（考虑个体变异和进度）
+        const baseProbability = params.restingProbability;
+        const progressFactor = 1 - progress * 0.5; // 随着进度增加，停留概率降低
+        const individualFactor = 0.8 + this.variation * 0.4; // 个体差异
+        const energyFactor = this.energy / 100; // 能量越低，越可能停留
+        
+        const finalProbability = baseProbability * progressFactor * individualFactor * energyFactor;
+        
+        return Math.random() < finalProbability;
+    }
+    
+    // 获取停留天数
+    getRestingDuration() {
+        const baseDuration = params.restingDuration;
+        const variation = params.restingVariation;
+        const individualFactor = 0.8 + this.variation * 0.4;
+        
+        // 计算停留天数（考虑变异）
+        let duration = baseDuration * individualFactor;
+        duration *= (0.8 + Math.random() * 0.4); // 随机变异
+        
+        // 确保停留天数在合理范围内
+        duration = Math.max(1, Math.min(10, Math.round(duration)));
+        
+        return duration;
+    }
+    
+    // 寻找最近的路径点
+    findNearestPathPoint(currentPos, path) {
+        let nearestPoint = null;
+        let minDistance = Infinity;
+        
+        for (let i = 0; i < path.length; i++) {
+            const distance = haversine(currentPos, path[i]);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestPoint = path[i];
+            }
+        }
+        
+        return nearestPoint;
+    }
+    
+    // 修正位置到水域
+    correctPositionToWater(newPos, currentPos) {
+        const maxAttempts = 5;
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            // 尝试不同的修正方向
+            const angle = (attempt / maxAttempts) * Math.PI * 2;
+            const correctionDistance = 0.2 * (attempt + 1); // 逐渐增加修正距离
+            
+            const correctedLat = currentPos[0] + Math.cos(angle) * correctionDistance;
+            const correctedLng = currentPos[1] + Math.sin(angle) * correctionDistance;
+            
+            if (isPointInWater(correctedLat, correctedLng, this.regionId)) {
+                this.waterCorrections++;
+                return [correctedLat, correctedLng];
+            }
+        }
+        
+        // 如果所有尝试都失败，返回当前位置（不移动）
+        this.landCrossings++;
+        return currentPos;
+    }
+    
+    // 生成个体路径（考虑个体差异）
+    generateIndividualPath() {
+        const pts = [this.start];
+        const envData = pregenerateEnvironmentData(this.days, this.regionId);
+        let currentPos = [this.start[0], this.start[1]];
+        const target = [this.end[0], this.end[1]];
+        
+        // 使用水域路径规划器
+        const pathPlanner = new WaterPathPlanner(this.start, this.end, this.regionId);
+        const waterOptimizedPath = pathPlanner.generateWaterOptimizedPath();
+        
+        // 计算总方向和距离
+        const dLat = target[0] - this.start[0];
+        const dLng = target[1] - this.start[1];
+        const totalDistance = haversine(this.start, target);
+        
+        // 个体游泳能力影响
+        const swimEffect = Math.min(1.4, this.swimSpeed / 1.2);
+        
+        // 个体能量储备影响
+        const initialEnergy = this.energy / 100;
+        
+        // 个体路径依赖强度（基于变异度调整）
+        const dependencyStrength = 0.8 * (0.8 + this.variation * 0.4);
+        
+        // 每天的移动距离（公里）
+        const dailyDistance = (totalDistance / this.days) * swimEffect;
+        
+        // 初始化前一天的方向（朝向目标）
+        let previousDirection = Math.atan2(dLng, dLat);
+        
+        // 水域跟随强度
+        const waterFollowingStrength = 0.7; // 70%概率跟随水域路径
+        
+        // 模拟每天的移动
+        let day = 0;
+        let actualDays = 0;
+        
+        while (day < this.days && actualDays < this.days * 2) {
+            // 获取当天的动态环境参数
+            const env = envData[Math.min(day, envData.length - 1)];
+            
+            // 计算当前进度
+            const progress = day / this.days;
+            
+            // 检查是否应该停留
+            if (this.decideToRest(currentPos, progress, day)) {
+                if (!this.isResting) {
+                    // 开始停留
+                    this.isResting = true;
+                    this.currentRestingDays = this.getRestingDuration();
+                    this.restingCount++;
+                    // 记录停留开始点
+                    this.restingPoints.push(pts.length);
+                }
+                
+                // 停留期间不移动，能量恢复
+                if (this.currentRestingDays > 0) {
+                    this.totalRestingDays++;
+                    this.currentRestingDays--;
+                    
+                    // 停留期间能量恢复（每天恢复5%）
+                    this.energy = Math.min(100, this.energy + 5);
+                    
+                    // 添加停留点（与前一天位置相同）
+                    pts.push([currentPos[0], currentPos[1]]);
+                    actualDays++;
+                    
+                    // 如果停留结束，重置状态
+                    if (this.currentRestingDays === 0) {
+                        this.isResting = false;
+                    }
+                    
+                    continue; // 跳过移动逻辑
+                }
+            }
+            
+            // 环境因素影响（考虑个体敏感性）
+            const tempSensitivity = 0.8 + this.variation * 0.4;
+            const currentSensitivity = 0.7 + this.variation * 0.6;
+            const salinitySensitivity = 0.6 + this.variation * 0.8;
+            
+            const temperatureEffect = (env.temperature - 10) / 10 * tempSensitivity;
+            const currentEffect = env.current * 0.5 * currentSensitivity;
+            const salinityEffect = (env.salinity - 32) / 10 * salinitySensitivity;
+            
+            // 能量衰减（考虑个体能量利用效率）
+            const energyEfficiency = 0.7 + this.variation * 0.6;
+            const energyLevel = initialEnergy * (1 - progress * 0.5 * energyEfficiency);
+            
+            // 计算当前到目标的方向
+            const remainingLat = target[0] - currentPos[0];
+            const remainingLng = target[1] - currentPos[1];
+            
+            // 基本方向（朝向目标）
+            const baseDirection = Math.atan2(remainingLng, remainingLat);
+            
+            // 水域路径引导
+            let waterGuidance = 0;
+            if (Math.random() < waterFollowingStrength) {
+                // 找到最近的水域路径点作为引导
+                const nearestWaterNode = this.findNearestPathPoint(currentPos, waterOptimizedPath);
+                if (nearestWaterNode) {
+                    const guidanceLat = nearestWaterNode[0] - currentPos[0];
+                    const guidanceLng = nearestWaterNode[1] - currentPos[1];
+                    waterGuidance = Math.atan2(guidanceLng, guidanceLat);
+                }
+            }
+            
+            // 环境因素导致的偏差（考虑个体行为变异）
+            const tempBias = temperatureEffect * 0.1 * Math.sin(day * 0.1) * this.variation;
+            const currentBias = currentEffect * 0.2 * Math.sin(day * 0.05) * this.variation;
+            const salinityBias = salinityEffect * 0.05 * Math.sin(day * 0.15) * this.variation;
+            
+            // 探索行为（考虑个体探索倾向）
+            const exploration = (Math.random() - 0.5) * 0.3 * (1 - progress) * this.explorationRate;
+            
+            // 学习行为（考虑个体学习能力）
+            const learningEffect = this.learningRate * progress * 0.1;
+            
+            // 综合方向（加入水域引导）
+            const waterGuidanceWeight = 0.3; // 水域引导权重
+            let otherDirection = baseDirection * (1 - waterGuidanceWeight) + waterGuidance * waterGuidanceWeight;
+            otherDirection += tempBias + currentBias + salinityBias + exploration + learningEffect;
+            
+            // 路径依赖效应
+            let direction;
+            if (day === 0) {
+                direction = otherDirection;
+            } else {
+                direction = previousDirection * dependencyStrength + otherDirection * (1 - dependencyStrength);
+            }
+            
+            // 随着接近终点，方向更加专注于目标
+            const focusFactor = Math.min(1, progress * 3);
+            direction = direction * (1 - focusFactor) + baseDirection * focusFactor;
+            
+            // 更新前一天的方向
+            previousDirection = direction;
+            
+            // 计算当天的移动
+            const latMove = Math.cos(direction) * dailyDistance / 111 * energyLevel;
+            const lngMove = Math.sin(direction) * dailyDistance / 111 * energyLevel / Math.cos(currentPos[0] * Math.PI / 180);
+            
+            // 更新位置
+            let newLat = currentPos[0] + latMove;
+            let newLng = currentPos[1] + lngMove;
+            
+            // 水域边界检查与修正
+            if (!isPointInWater(newLat, newLng, this.regionId)) {
+                // 如果新位置不在水域内，进行修正
+                const correctedPos = this.correctPositionToWater([newLat, newLng], currentPos);
+                newLat = correctedPos[0];
+                newLng = correctedPos[1];
+            }
+            
+            currentPos[0] = newLat;
+            currentPos[1] = newLng;
+            
+            // 确保不超出合理边界
+            const region = seaRegions[this.regionId];
+            const regionBounds = region ? region.bounds : bounds;
+            currentPos[0] = Math.max(regionBounds.minLat, Math.min(regionBounds.maxLat, currentPos[0]));
+            currentPos[1] = Math.max(regionBounds.minLng, Math.min(regionBounds.maxLng, currentPos[1]));
+            
+            // 如果接近终点，提前结束
+            if (haversine(currentPos, target) < 20) {
+                pts.push(target);
+                break;
+            }
+            
+            pts.push([currentPos[0], currentPos[1]]);
+            day++;
+            actualDays++;
+        }
+        
+        // 确保路径以终点结束
+        if (pts[pts.length - 1][0] !== target[0] || pts[pts.length - 1][1] !== target[1]) {
+            pts.push(target);
+        }
+        
+        return {path: this.smoothPath(pts), envData};
+    }
+    
+    // 路径平滑
+    smoothPath(path) {
+        if (path.length < 3) return path;
+        
+        const smoothed = [path[0]];
+        
+        for (let i = 1; i < path.length - 1; i++) {
+            const prev = path[i-1];
+            const curr = path[i];
+            const next = path[i+1];
+            
+            const weight1 = 0.25;
+            const weight2 = 0.5;
+            const weight3 = 0.25;
+            
+            const smoothedLat = prev[0] * weight1 + curr[0] * weight2 + next[0] * weight3;
+            const smoothedLng = prev[1] * weight1 + curr[1] * weight2 + next[1] * weight3;
+            
+            smoothed.push([smoothedLat, smoothedLng]);
+        }
+        
+        smoothed.push(path[path.length - 1]);
+        return smoothed;
+    }
+    
+    // 检查是否成功到达终点
+    checkSuccess() {
+        if (this.path.length === 0) return false;
+        const lastPoint = this.path[this.path.length - 1];
+        return haversine(lastPoint, this.end) < 10; // 10公里内算成功
+    }
+    
+    // 获取路径长度
+    getPathLength() {
+        return pathDistance(this.path);
+    }
+}
+
+/* --- 群体路径拟合系统 --- */
+class GroupPathFitter {
+    constructor(agents) {
+        this.agents = agents;
+        this.successfulAgents = agents.filter(a => a.success);
+    }
+    
+    // 拟合群体路径
+    fitGroupPath(method = 'median') {
+        if (this.successfulAgents.length === 0) return null;
+        
+        // 找到所有路径的最大长度
+        const maxLength = Math.max(...this.successfulAgents.map(a => a.path.length));
+        
+        // 为每个时间点计算群体位置
+        const groupPath = [];
+        
+        for (let i = 0; i < maxLength; i++) {
+            const positions = [];
+            
+            // 收集所有智能体在当前时间点的位置
+            this.successfulAgents.forEach(agent => {
+                if (i < agent.path.length) {
+                    positions.push(agent.path[i]);
+                } else {
+                    // 如果路径较短，使用最后一个点
+                    positions.push(agent.path[agent.path.length - 1]);
+                }
+            });
+            
+            // 根据选择的方法计算群体位置
+            let groupPoint;
+            switch (method) {
+                case 'mean':
+                    groupPoint = this.calculateMean(positions);
+                    break;
+                case 'median':
+                    groupPoint = this.calculateMedian(positions);
+                    break;
+                case 'mode':
+                    groupPoint = this.calculateMode(positions);
+                    break;
+                case 'weighted':
+                    groupPoint = this.calculateWeightedMean(positions, i / maxLength);
+                    break;
+                default:
+                    groupPoint = this.calculateMedian(positions);
+            }
+            
+            groupPath.push(groupPoint);
+        }
+        
+        return groupPath;
+    }
+    
+    // 计算均值
+    calculateMean(positions) {
+        const sumLat = positions.reduce((sum, pos) => sum + pos[0], 0);
+        const sumLng = positions.reduce((sum, pos) => sum + pos[1], 0);
+        return [sumLat / positions.length, sumLng / positions.length];
+    }
+    
+    // 计算中位数
+    calculateMedian(positions) {
+        const lats = positions.map(p => p[0]).sort((a, b) => a - b);
+        const lngs = positions.map(p => p[1]).sort((a, b) => a - b);
+        
+        const mid = Math.floor(positions.length / 2);
+        
+        if (positions.length % 2 === 0) {
+            return [
+                (lats[mid - 1] + lats[mid]) / 2,
+                (lngs[mid - 1] + lngs[mid]) / 2
+            ];
+        } else {
+            return [lats[mid], lngs[mid]];
+        }
+    }
+    
+    // 计算众数（简化版）
+    calculateMode(positions) {
+        // 简化实现：使用k-means聚类找到最密集的区域
+        const clusters = this.simpleKMeans(positions, 3);
+        let largestCluster = clusters[0];
+        
+        clusters.forEach(cluster => {
+            if (cluster.points.length > largestCluster.points.length) {
+                largestCluster = cluster;
+            }
+        });
+        
+        return this.calculateMean(largestCluster.points);
+    }
+    
+    // 计算加权平均（后期更重视成功的路径）
+    calculateWeightedMean(positions, progress) {
+        const weights = positions.map((_, index) => {
+            const agent = this.successfulAgents[index];
+            // 权重基于路径效率和进度
+            const efficiency = agent.getPathLength() / haversine(agent.start, agent.end);
+            return (1 / efficiency) * (1 + progress * 2);
+        });
+        
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+        const weightedLat = positions.reduce((sum, pos, i) => sum + pos[0] * weights[i], 0) / totalWeight;
+        const weightedLng = positions.reduce((sum, pos, i) => sum + pos[1] * weights[i], 0) / totalWeight;
+        
+        return [weightedLat, weightedLng];
+    }
+    
+    // 简化的k-means聚类
+    simpleKMeans(points, k, maxIterations = 10) {
+        // 随机初始化中心点
+        let centroids = [];
+        for (let i = 0; i < k; i++) {
+            centroids.push(points[Math.floor(Math.random() * points.length)]);
+        }
+        
+        let clusters = [];
+        
+        for (let iter = 0; iter < maxIterations; iter++) {
+            // 分配点到最近的聚类
+            clusters = centroids.map(() => ({ points: [], centroid: null }));
+            
+            points.forEach(point => {
+                let minDistance = Infinity;
+                let bestCluster = 0;
+                
+                centroids.forEach((centroid, idx) => {
+                    const distance = haversine(point, centroid);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        bestCluster = idx;
+                    }
+                });
+                
+                clusters[bestCluster].points.push(point);
+            });
+            
+            // 更新中心点
+            let changed = false;
+            centroids = clusters.map(cluster => {
+                if (cluster.points.length === 0) {
+                    return points[Math.floor(Math.random() * points.length)];
+                }
+                
+                const newCentroid = this.calculateMean(cluster.points);
+                cluster.centroid = newCentroid;
+                return newCentroid;
+            });
+        }
+        
+        return clusters;
+    }
+    
+    // 计算置信区间
+    calculateConfidenceInterval(groupPath, confidenceLevel = 0.8) {
+        if (this.successfulAgents.length === 0) return null;
+        
+        const intervals = [];
+        const maxLength = Math.max(...this.successfulAgents.map(a => a.path.length));
+        const zScore = this.getZScore(confidenceLevel);
+        
+        for (let i = 0; i < maxLength; i++) {
+            const positions = [];
+            
+            this.successfulAgents.forEach(agent => {
+                if (i < agent.path.length) {
+                    positions.push(agent.path[i]);
+                } else {
+                    positions.push(agent.path[agent.path.length - 1]);
+                }
+            });
+            
+            // 计算标准差
+            const mean = this.calculateMean(positions);
+            const latVariance = positions.reduce((sum, pos) => sum + Math.pow(pos[0] - mean[0], 2), 0) / positions.length;
+            const lngVariance = positions.reduce((sum, pos) => sum + Math.pow(pos[1] - mean[1], 2), 0) / positions.length;
+            
+            const latStdDev = Math.sqrt(latVariance);
+            const lngStdDev = Math.sqrt(lngVariance);
+            
+            // 计算置信区间
+            const marginLat = zScore * latStdDev / Math.sqrt(positions.length);
+            const marginLng = zScore * lngStdDev / Math.sqrt(positions.length);
+            
+            intervals.push({
+                center: groupPath[i] || mean,
+                latRange: [mean[0] - marginLat, mean[0] + marginLat],
+                lngRange: [mean[1] - marginLng, mean[1] + marginLng]
+            });
+        }
+        
+        return intervals;
+    }
+    
+    // 获取Z分数（简化版）
+    getZScore(confidenceLevel) {
+        const zScores = {
+            0.8: 1.282,
+            0.85: 1.440,
+            0.9: 1.645,
+            0.95: 1.960
+        };
+        return zScores[confidenceLevel] || 1.645;
+    }
+    
+    // 计算路径密度
+    calculatePathDensity(gridSize = 0.5) { // 网格大小（度）
+        const densityMap = {};
+        const region = seaRegions[this.agents[0]?.regionId] || seaRegions.bering_sea;
+        const bounds = region.bounds;
+        
+        // 初始化密度网格
+        for (let lat = bounds.minLat; lat <= bounds.maxLat; lat += gridSize) {
+            for (let lng = bounds.minLng; lng <= bounds.maxLng; lng += gridSize) {
+                const key = `${Math.floor(lat/gridSize)*gridSize},${Math.floor(lng/gridSize)*gridSize}`;
+                densityMap[key] = 0;
+            }
+        }
+        
+        // 统计路径经过的网格
+        this.successfulAgents.forEach(agent => {
+            agent.path.forEach(point => {
+                const latKey = Math.floor(point[0]/gridSize)*gridSize;
+                const lngKey = Math.floor(point[1]/gridSize)*gridSize;
+                const key = `${latKey},${lngKey}`;
+                
+                if (densityMap[key] !== undefined) {
+                    densityMap[key]++;
+                }
+            });
+        });
+        
+        return densityMap;
+    }
+    
+    // 计算群体行为统计指标
+    calculateGroupMetrics() {
+        const successfulCount = this.successfulAgents.length;
+        const totalCount = this.agents.length;
+        const successRate = successfulCount / totalCount;
+        
+        // 路径收敛度 - 成功路径之间的平均距离
+        let convergence = 0;
+        if (successfulCount > 1) {
+            let totalDistance = 0;
+            let pairCount = 0;
+            
+            for (let i = 0; i < successfulCount; i++) {
+                for (let j = i + 1; j < successfulCount; j++) {
+                    const path1 = this.successfulAgents[i].path;
+                    const path2 = this.successfulAgents[j].path;
+                    const minLength = Math.min(path1.length, path2.length);
+                    
+                    let pathDistance = 0;
+                    for (let k = 0; k < minLength; k++) {
+                        pathDistance += haversine(path1[k], path2[k]);
+                    }
+                    
+                    totalDistance += pathDistance / minLength;
+                    pairCount++;
+                }
+            }
+            
+            convergence = Math.max(0, 1 - (totalDistance / pairCount / 100));
+        }
+        
+        // 行为一致性 - 路径方向的相似性
+        let consistency = 0;
+        if (successfulCount > 0) {
+            const pathLengths = this.successfulAgents.map(a => a.getPathLength());
+            const straightDistance = haversine(this.agents[0].start, this.agents[0].end);
+            const efficiencies = pathLengths.map(length => straightDistance / length);
+            consistency = efficiencies.reduce((sum, eff) => sum + eff, 0) / efficiencies.length;
+        }
+        
+        // 探索多样性 - 路径长度的变异系数
+        let diversity = 0;
+        if (successfulCount > 1) {
+            const pathLengths = this.successfulAgents.map(a => a.getPathLength());
+            const meanLength = pathLengths.reduce((sum, len) => sum + len, 0) / pathLengths.length;
+            const variance = pathLengths.reduce((sum, len) => sum + Math.pow(len - meanLength, 2), 0) / pathLengths.length;
+            const stdDev = Math.sqrt(variance);
+            diversity = Math.min(1, stdDev / meanLength);
+        }
+        
+        // 路径效率
+        let efficiency = 0;
+        if (successfulCount > 0) {
+            const straightDistance = haversine(this.agents[0].start, this.agents[0].end);
+            const pathLengths = this.successfulAgents.map(a => a.getPathLength());
+            efficiency = pathLengths.reduce((sum, len) => sum + (straightDistance / len), 0) / pathLengths.length;
+        }
+        
+        return {
+            successRate,
+            convergence,
+            consistency,
+            diversity,
+            efficiency
+        };
+    }
+}
+
+/* --- 环境图表 --- */
+let envChart = null;
+function initEnvChart() {
+    const ctx = document.getElementById('env-chart-canvas').getContext('2d');
+    envChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: '水温',
+                    data: [],
+                    borderColor: '#ff6384',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: '洋流',
+                    data: [],
+                    borderColor: '#36a2eb',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: '盐度',
+                    data: [],
+                    borderColor: '#4bc0c0',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '模拟天数'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '参数值'
+                    },
+                    min: 0,
+                    max: 1
+                }
+            }
+        }
+    });
+}
+
+function updateEnvChart(envData) {
+    if (!envChart) return;
+    
+    const days = envData.length;
+    const labels = Array.from({length: days}, (_, i) => i + 1);
+    
+    // 标准化数据用于图表显示
+    const tempData = envData.map(env => (env.temperature - 2) / 16); // 2-18°C -> 0-1
+    const currentData = envData.map(env => env.current / 1.5); // 0-1.5 m/s -> 0-1
+    const salinityData = envData.map(env => (env.salinity - 28) / 7); // 28-35 PSU -> 0-1
+    
+    envChart.data.labels = labels;
+    envChart.data.datasets[0].data = tempData;
+    envChart.data.datasets[1].data = currentData;
+    envChart.data.datasets[2].data = salinityData;
+    envChart.update();
+}
+
+/* --- UI 绑定 --- */
+const $ = id=>document.getElementById(id);
+function syncDisplays(){
+    $('days-val').textContent=params.days+'天';
+    $('temp-val').textContent=params.temp+'°C';
+    $('cur-val').textContent=params.cur+' m/s';
+    $('sal-val').textContent=params.sal+' PSU';
+    $('size-val').textContent=params.size+' m';
+    $('swim-val').textContent=params.swim+' m/s';
+    $('en-val').textContent=params.energy+'%';
+    $('agent-count-val').textContent=params.agentCount;
+    $('behavior-var-val').textContent=params.behaviorVariation.toFixed(1)+' (中等)';
+    $('learning-val').textContent=params.learningRate.toFixed(1)+' (中等)';
+    $('exploration-val').textContent=params.explorationRate.toFixed(1)+' (中等)';
+    $('confidence-val').textContent=(params.confidenceLevel*100)+'%';
+    $('resting-prob-val').textContent=(params.restingProbability*100)+'%';
+    $('resting-dur-val').textContent=params.restingDuration+'天';
+    $('resting-var-val').textContent=params.restingVariation.toFixed(1)+' (中等)';
+    $('feeding-size-val').textContent=params.feedingAreaSize.toFixed(1)+'°';
+    
+    // 环境变化强度显示
+    const envVarLabels = ['固定', '轻微变化', '中等变化', '较强变化', '强烈变化'];
+    $('env-var-val').textContent = envVarLabels[params.envVariation * 2];
+}
+
+// 更新河流选择时的起点
+function updateStartForRiver(riverId) {
+    const regionId = riverToRegion[riverId];
+    if (regionId && seaRegions[regionId]) {
+        const region = seaRegions[regionId];
+        $('start-lat').value = region.defaultStart[0];
+        $('start-lat').min = region.bounds.minLat;
+        $('start-lat').max = region.bounds.maxLat;
+        $('start-lng').value = region.defaultStart[1];
+        $('start-lng').min = region.bounds.minLng;
+        $('start-lng').max = region.bounds.maxLng;
+        
+        // 更新提示
+        $('region-hint').textContent = `当前区域: ${region.name} - 起点已自动设置`;
+        
+        // 更新参数
+        params.startLat = region.defaultStart[0];
+        params.startLng = region.defaultStart[1];
+    }
+}
+
+// 事件绑定
+$('simulation-days').addEventListener('input',e=>{params.days=parseInt(e.target.value,10);syncDisplays();});
+$('temperature').addEventListener('input',e=>{params.temp=parseFloat(e.target.value);syncDisplays();});
+$('current').addEventListener('input',e=>{params.cur=parseFloat(e.target.value);syncDisplays();});
+$('salinity').addEventListener('input',e=>{params.sal=parseFloat(e.target.value);syncDisplays();});
+$('env-variation').addEventListener('input',e=>{params.envVariation=parseFloat(e.target.value);syncDisplays();});
+$('fish-size').addEventListener('input',e=>{params.size=parseFloat(e.target.value);syncDisplays();});
+$('swim-speed').addEventListener('input',e=>{params.swim=parseFloat(e.target.value);syncDisplays();});
+$('energy').addEventListener('input',e=>{params.energy=parseInt(e.target.value,10);syncDisplays();});
+$('agent-count').addEventListener('input',e=>{params.agentCount=parseInt(e.target.value,10);syncDisplays();});
+$('behavior-variation').addEventListener('input',e=>{params.behaviorVariation=parseFloat(e.target.value);syncDisplays();});
+$('learning-rate').addEventListener('input',e=>{params.learningRate=parseFloat(e.target.value);syncDisplays();});
+$('exploration-rate').addEventListener('input',e=>{params.explorationRate=parseFloat(e.target.value);syncDisplays();});
+$('confidence-level').addEventListener('input',e=>{params.confidenceLevel=parseFloat(e.target.value);syncDisplays();});
+$('resting-probability').addEventListener('input',e=>{params.restingProbability=parseFloat(e.target.value);syncDisplays();});
+$('resting-duration').addEventListener('input',e=>{params.restingDuration=parseInt(e.target.value,10);syncDisplays();});
+$('resting-variation').addEventListener('input',e=>{params.restingVariation=parseFloat(e.target.value);syncDisplays();});
+$('feeding-area-size').addEventListener('input',e=>{params.feedingAreaSize=parseFloat(e.target.value);syncDisplays();});
+$('start-lat').addEventListener('change',e=>{
+    const v=parseFloat(e.target.value);
+    const regionId = riverToRegion[params.riverId];
+    const regionBounds = regionId ? seaRegions[regionId].bounds : bounds;
+    
+    if (Number.isFinite(v) && v>=regionBounds.minLat && v<=regionBounds.maxLat){ 
+        params.startLat=v; 
+        $('lat-err').style.display='none'; 
+    } else { 
+        $('lat-err').style.display='block'; 
+        e.target.value=params.startLat; 
+    }
+});
+$('start-lng').addEventListener('change',e=>{
+    const v=parseFloat(e.target.value);
+    const regionId = riverToRegion[params.riverId];
+    const regionBounds = regionId ? seaRegions[regionId].bounds : bounds;
+    
+    if (Number.isFinite(v) && v>=regionBounds.minLng && v<=regionBounds.maxLng){ 
+        params.startLng=v; 
+        $('lng-err').style.display='none'; 
+    } else { 
+        $('lng-err').style.display='block'; 
+        e.target.value=params.startLng; 
+    }
+});
+riverSelect.addEventListener('change',e=>{ 
+    params.riverId=e.target.value; 
+    updateStartForRiver(params.riverId);
+});
+
+// 图层控制事件
+$('show-grdc-rivers').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(grdcRiverLayer);
+    } else {
+        map.removeLayer(grdcRiverLayer);
+    }
+});
+
+$('show-water-boundaries').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(waterBoundariesLayer);
+    } else {
+        map.removeLayer(waterBoundariesLayer);
+    }
+});
+
+$('show-water-nodes').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(waterNodesLayer);
+    } else {
+        map.removeLayer(waterNodesLayer);
+    }
+});
+
+$('show-water-paths').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(waterPathsLayer);
+    } else {
+        map.removeLayer(waterPathsLayer);
+    }
+});
+
+$('show-feeding-areas').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(feedingAreasLayer);
+    } else {
+        map.removeLayer(feedingAreasLayer);
+    }
+});
+
+$('show-individual-paths').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(individualPathLayer);
+    } else {
+        map.removeLayer(individualPathLayer);
+    }
+});
+
+$('show-group-path').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(groupPathLayer);
+    } else {
+        map.removeLayer(groupPathLayer);
+    }
+});
+
+$('show-confidence-interval').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(confidenceLayer);
+    } else {
+        map.removeLayer(confidenceLayer);
+    }
+});
+
+$('show-path-density').addEventListener('change', function() {
+    if (this.checked) {
+        map.addLayer(densityLayer);
+    } else {
+        map.removeLayer(densityLayer);
+    }
+});
+
+document.querySelectorAll('.basemap-option').forEach(el=>{
+    el.addEventListener('click',()=>{
+        document.querySelectorAll('.basemap-option').forEach(x=>x.classList.remove('active'));
+        el.classList.add('active');
+        const t=el.getAttribute('data-basemap');
+        if (currentBase!==t){ map.removeLayer(baseLayers[currentBase]); baseLayers[t].addTo(map); currentBase=t; }
+    });
+});
+$('close-info').addEventListener('click',()=>{$('click-info').style.display='none';});
+
+// 新增：路径数据面板关闭按钮
+$('path-data-close').addEventListener('click',()=>{$('path-data-panel').style.display='none';});
+
+/* --- 距离工具 --- */
+function haversine(a,b){
+    const R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLng=(b[1]-a[1])*Math.PI/180;
+    const s1=Math.sin(dLat/2),s2=Math.sin(dLng/2);
+    const A=s1*s1+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*s2*s2;
+    return R*2*Math.atan2(Math.sqrt(A),Math.sqrt(1-A));
+}
+function pathDistance(p){ let d=0; for(let i=1;i<p.length;i++) d+=haversine(p[i-1],p[i]); return d; }
+
+/* --- 动态环境系统 --- */
+function generateDynamicEnvironment(day, totalDays, startPos, currentPos, regionId) {
+    const region = seaRegions[regionId] || seaRegions.bering_sea;
+    const envProfile = region.envProfile;
+    
+    // 基础季节性变化（8月到11月）
+    const seasonalProgress = day / totalDays;
+    
+    // 水温：从夏季较高温度逐渐下降到秋季低温
+    const baseTemp = params.temp - (seasonalProgress * 4); // 整体下降趋势
+    // 添加随机日变化
+    const dailyTempVariation = (Math.sin(day * 0.3) + (Math.random() - 0.5)) * params.envVariation;
+    const temperature = Math.max(envProfile.tempRange[0], Math.min(envProfile.tempRange[1], baseTemp + dailyTempVariation));
+    
+    // 洋流：受天气影响变化
+    const baseCurrent = params.cur;
+    const weatherEffect = Math.sin(day * 0.5) * 0.2 * params.envVariation + (Math.random() - 0.5) * 0.1 * params.envVariation;
+    const current = Math.max(envProfile.currentRange[0], Math.min(envProfile.currentRange[1], baseCurrent + weatherEffect));
+    
+    // 盐度：受降雨和融冰影响
+    const baseSalinity = params.sal;
+    const rainfallEffect = (Math.sin(day * 0.2) - 0.3) * 1.5 * params.envVariation; // 模拟降雨导致的盐度降低
+    const salinity = Math.max(envProfile.salinityRange[0], Math.min(envProfile.salinityRange[1], baseSalinity + rainfallEffect));
+    
+    return { temperature, current, salinity };
+}
+
+// 预生成整个模拟期间的环境数据
+function pregenerateEnvironmentData(totalDays, regionId) {
+    const envData = [];
+    for (let day = 0; day < totalDays; day++) {
+        // 使用近似的位置（随着模拟进行会变化，但这里只是预生成）
+        const env = generateDynamicEnvironment(day, totalDays, [0,0], [0,0], regionId);
+        envData.push(env);
+    }
+    return envData;
+}
+
+/* --- 显示路径数据函数 --- */
+function showPathData(groupPath, start, end) {
+    if (!groupPath || groupPath.length === 0) return;
+    
+    const pathDataContent = document.getElementById('path-data-content');
+    pathDataContent.innerHTML = '';
+    
+    // 添加路径摘要信息
+    const summaryDiv = document.createElement('div');
+    summaryDiv.style.marginBottom = '10px';
+    summaryDiv.style.paddingBottom = '10px';
+    summaryDiv.style.borderBottom = '1px solid #e0e0e0';
+    
+    summaryDiv.innerHTML = `
+        <div class="path-data-item">
+            <span class="path-data-label">路径点数:</span>
+            <span class="path-data-value">${groupPath.length}</span>
+        </div>
+        <div class="path-data-item">
+            <span class="path-data-label">路径长度:</span>
+            <span class="path-data-value">${pathDistance(groupPath).toFixed(1)} km</span>
+        </div>
+        <div class="path-data-item">
+            <span class="path-data-label">直线距离:</span>
+            <span class="path-data-value">${haversine(start, end).toFixed(1)} km</span>
+        </div>
+    `;
+    
+    pathDataContent.appendChild(summaryDiv);
+    
+    // 添加详细路径点数据
+    const detailsDiv = document.createElement('div');
+    detailsDiv.style.maxHeight = '300px';
+    detailsDiv.style.overflowY = 'auto';
+    
+    // 只显示部分关键点（每5个点显示一个，避免数据过多）
+    const step = Math.max(1, Math.floor(groupPath.length / 20));
+    
+    for (let i = 0; i < groupPath.length; i += step) {
+        const point = groupPath[i];
+        const distanceFromStart = i === 0 ? 0 : pathDistance(groupPath.slice(0, i+1));
+        const day = Math.floor(i * params.days / groupPath.length);
+        
+        const pointDiv = document.createElement('div');
+        pointDiv.className = 'path-data-item';
+        pointDiv.style.marginBottom = '5px';
+        pointDiv.style.padding = '3px';
+        pointDiv.style.backgroundColor = i % (step*2) === 0 ? '#f9f9f9' : '#fff';
+        
+        pointDiv.innerHTML = `
+            <div><strong>第${day+1}天</strong> (点 ${i+1}/${groupPath.length})</div>
+            <div class="path-data-item">
+                <span class="path-data-label">纬度:</span>
+                <span class="path-data-value">${point[0].toFixed(4)}°</span>
+            </div>
+            <div class="path-data-item">
+                <span class="path-data-label">经度:</span>
+                <span class="path-data-value">${point[1].toFixed(4)}°</span>
+            </div>
+            <div class="path-data-item">
+                <span class="path-data-label">距起点:</span>
+                <span class="path-data-value">${distanceFromStart.toFixed(1)} km</span>
+            </div>
+        `;
+        
+        detailsDiv.appendChild(pointDiv);
+    }
+    
+    pathDataContent.appendChild(detailsDiv);
+    
+    // 显示路径数据面板
+    document.getElementById('path-data-panel').style.display = 'block';
+}
+
+/* --- 多智能体模拟主函数 --- */
+async function simulateMultiAgent() {
+    if(!mapReady) return;
+    
+    // 校验
+    const lat=parseFloat($('start-lat').value), lng=parseFloat($('start-lng').value);
+    const regionId = riverToRegion[params.riverId];
+    const regionBounds = regionId ? seaRegions[regionId].bounds : bounds;
+    
+    if(!(lat>=regionBounds.minLat && lat<=regionBounds.maxLat)){ $('lat-err').style.display='block'; return; }
+    if(!(lng>=regionBounds.minLng && lng<=regionBounds.maxLng)){ $('lng-err').style.display='block'; return; }
+    params.startLat=lat; params.startLng=lng;
+
+    // 清理图层
+    routeLayers.forEach(l=>map.removeLayer(l)); routeLayers=[];
+    clickMarkers.forEach(m=>map.removeLayer(m)); clickMarkers=[];
+    individualPathLayer.clearLayers();
+    groupPathLayer.clearLayers();
+    confidenceLayer.clearLayers();
+    densityLayer.clearLayers();
+    feedingAreasLayer.clearLayers();
+    waterPathsLayer.clearLayers();
+
+    const start=[params.startLat, params.startLng];
+    const river=rivers.find(r=>r.id===params.riverId) || rivers[0];
+    const end=[river.lat, river.lng];
+    
+    // 显示水域路径规划信息
+    const pathPlanner = new WaterPathPlanner(start, end, regionId);
+    const waterPath = pathPlanner.generateWaterOptimizedPath();
+    
+    // 绘制水域优化路径（参考路径）
+    if (document.getElementById('show-water-paths').checked) {
+        const waterPathLine = L.polyline(waterPath, {
+            color: '#3498db',
+            weight: 3,
+            opacity: 0.5,
+            dashArray: '10,5',
+            className: 'water-reference-path'
+        }).bindPopup('水域优化参考路径').addTo(waterPathsLayer);
+        routeLayers.push(waterPathLine);
+    }
+
+    // 绘制海域区域
+    const regionIdForRiver = riverToRegion[params.riverId];
+    if (regionIdForRiver && seaRegions[regionIdForRiver]) {
+        const region = seaRegions[regionIdForRiver];
+        const regionBounds = [
+            [region.bounds.minLat, region.bounds.minLng],
+            [region.bounds.maxLat, region.bounds.maxLng]
+        ];
+        const regionRect = L.rectangle(regionBounds, {
+            color: region.color,
+            fillColor: region.color,
+            fillOpacity: 0.1,
+            weight: 1,
+            dashArray: '5,5'
+        }).addTo(map);
+        routeLayers.push(regionRect);
+    }
+
+    // 起点/终点标记 - 修复：使用蓝色图标
+    const startMarker=L.marker(start, {
+        icon: L.divIcon({
+            className: 'start-marker',
+            html: '<div style="background:#3388ff;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 5px rgba(0,0,0,0.5)"></div>',
+            iconSize: [22, 22]
+        })
+    }).bindPopup('秋鲑洄游起点').addTo(map); 
+    routeLayers.push(startMarker);
+    
+    const endMarker=L.marker(end,{
+        icon:L.divIcon({
+            className:'river-end',
+            html:'<div style="background:#00aa00;width:14px;height:14px;border-radius:50%;border:2px solid #fff"></div>',
+            iconSize:[18,18]
+        })
+    }).bindPopup('河流终点：'+river.name).addTo(map); 
+    routeLayers.push(endMarker);
+
+    // 更新进度显示
+    $('completed-agents').textContent = `0/${params.agentCount}`;
+    $('simulation-progress').style.width = '0%';
+    $('progress-value').textContent = '0%';
+    $('fitting-progress').style.width = '0%';
+    $('fitting-value').textContent = '0%';
+
+    // 创建智能体
+    const agents = [];
+    for (let i = 0; i < params.agentCount; i++) {
+        const variation = params.behaviorVariation * (0.5 + Math.random()); // 个体行为变异
+        agents.push(new Agent(i, start, end, params.days, regionIdForRiver, variation));
+    }
+
+    // 批量模拟智能体（使用setTimeout避免阻塞UI）
+    let completed = 0;
+    const totalAgents = agents.length;
+    
+    // 修复：使用更可靠的进度更新方法
+    function updateProgress() {
+        const progress = (completed / totalAgents) * 100;
+        $('completed-agents').textContent = `${completed}/${totalAgents}`;
+        $('simulation-progress').style.width = `${Math.min(100, progress)}%`;
+        $('progress-value').textContent = `${Math.min(100, Math.round(progress))}%`;
+    }
+    
+    // 逐个处理智能体，避免并发问题
+    function processAgent(index) {
+        if (index >= totalAgents) {
+            // 所有智能体模拟完成，开始拟合群体路径
+            fitGroupPath(agents, start, end);
+            return;
+        }
+        
+        setTimeout(() => {
+            agents[index].simulate();
+            completed++;
+            
+            // 更新进度
+            updateProgress();
+            
+            // 绘制个体路径
+            if (document.getElementById('show-individual-paths').checked && agents[index].success) {
+                const path = L.polyline(agents[index].path, {
+                    color: '#ffb380',
+                    weight: 2,
+                    opacity: 0.3,
+                    className: 'individual-path'
+                }).addTo(individualPathLayer);
+            }
+            
+            // 处理下一个智能体
+            processAgent(index + 1);
+        }, 0);
+    }
+    
+    // 开始处理第一个智能体
+    processAgent(0);
+}
+
+// 拟合群体路径
+function fitGroupPath(agents, start, end) {
+    $('fitting-progress').style.width = '50%';
+    $('fitting-value').textContent = '50%';
+    
+    // 创建拟合器
+    const fitter = new GroupPathFitter(agents);
+    
+    // 拟合群体路径
+    const fittingMethod = document.getElementById('fitting-method').value;
+    const groupPath = fitter.fitGroupPath(fittingMethod);
+    
+    $('fitting-progress').style.width = '75%';
+    $('fitting-value').textContent = '75%';
+    
+    if (!groupPath) {
+        alert('没有成功到达终点的智能体，无法拟合群体路径');
+        return;
+    }
+    
+    // 存储当前群体路径数据
+    currentGroupPath = groupPath;
+    
+    // 计算置信区间
+    const confidenceIntervals = fitter.calculateConfidenceInterval(groupPath, params.confidenceLevel);
+    
+    $('fitting-progress').style.width = '90%';
+    $('fitting-value').textContent = '90%';
+    
+    // 计算路径密度
+    const pathDensity = fitter.calculatePathDensity();
+    
+    // 识别和绘制索饵场
+    const feedingAreaSystem = new DynamicFeedingAreas();
+    const feedingAreas = feedingAreaSystem.identifyFeedingAreas(groupPath, agents);
+    feedingAreaSystem.drawFeedingAreas();
+    
+    $('fitting-progress').style.width = '100%';
+    $('fitting-value').textContent = '100%';
+    
+    // 绘制群体路径
+    if (document.getElementById('show-group-path').checked) {
+        const groupLine = L.polyline(groupPath, {
+            color: '#ff6600',
+            weight: 6,
+            opacity: 0.9,
+            className: 'group-consensus-path'
+        }).bindPopup('群体共识路径<br><button id="show-path-data-btn" style="margin-top:5px;padding:3px 8px;background:#3388ff;color:white;border:none;border-radius:3px;cursor:pointer">显示路径数据</button>')
+          .addTo(groupPathLayer);
+        
+        // 添加点击事件显示路径数据
+        groupLine.on('popupopen', function() {
+            document.getElementById('show-path-data-btn').addEventListener('click', function() {
+                showPathData(groupPath, start, end);
+            });
+        });
+    }
+    
+    // 绘制置信区间
+    if (document.getElementById('show-confidence-interval').checked && confidenceIntervals) {
+        confidenceIntervals.forEach(interval => {
+            const bounds = [
+                [interval.latRange[0], interval.lngRange[0]],
+                [interval.latRange[1], interval.lngRange[1]]
+            ];
+            const rect = L.rectangle(bounds, {
+                color: '#3498db',
+                fillColor: '#3498db',
+                fillOpacity: 0.1,
+                weight: 1,
+                className: 'confidence-interval'
+            }).addTo(confidenceLayer);
+        });
+    }
+    
+    // 绘制路径密度
+    if (document.getElementById('show-path-density').checked) {
+        Object.entries(pathDensity).forEach(([key, count]) => {
+            const [lat, lng] = key.split(',').map(Number);
+            if (count > 0) {
+                let color, opacity;
+                if (count > params.agentCount * 0.3) {
+                    color = '#2ecc71'; // 高密度 - 绿色
+                    opacity = 0.6;
+                } else if (count > params.agentCount * 0.1) {
+                    color = '#f1c40f'; // 中密度 - 黄色
+                    opacity = 0.4;
+                } else {
+                    color = '#e74c3c'; // 低密度 - 红色
+                    opacity = 0.2;
+                }
+                
+                const rect = L.rectangle([
+                    [lat, lng],
+                    [lat + 0.5, lng + 0.5]
+                ], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: opacity,
+                    weight: 0
+                }).bindPopup(`路径密度: ${count}`).addTo(densityLayer);
+            }
+        });
+    }
+    
+    // 计算统计指标
+    const metrics = fitter.calculateGroupMetrics();
+    
+    // 更新统计面板
+    updateStatistics(agents, metrics, groupPath, feedingAreas);
+    
+    // 更新环境图表（使用第一个成功智能体的环境数据）
+    const successfulAgent = agents.find(a => a.success);
+    if (successfulAgent) {
+        updateEnvChart(successfulAgent.envData);
+    }
+    
+    // 视图
+    map.fitBounds(L.latLngBounds([start, end]), {padding: [20, 20]});
+}
+
+// 更新统计信息
+function updateStatistics(agents, metrics, groupPath, feedingAreas) {
+    const successfulAgents = agents.filter(a => a.success);
+    const pathLengths = successfulAgents.map(a => a.getPathLength());
+    
+    // 停留统计
+    const restingCounts = successfulAgents.map(a => a.restingCount);
+    const restingDays = successfulAgents.map(a => a.totalRestingDays);
+    
+    // 基本统计
+    $('total-agents').textContent = agents.length;
+    $('successful-agents').textContent = successfulAgents.length;
+    $('avg-path-length').textContent = pathLengths.length > 0 ? 
+        `${(pathLengths.reduce((a, b) => a + b, 0) / pathLengths.length).toFixed(1)} km` : '--';
+    $('path-std').textContent = pathLengths.length > 1 ? 
+        `${Math.sqrt(pathLengths.reduce((sq, n) => sq + Math.pow(n - metrics.efficiency, 2), 0) / pathLengths.length).toFixed(1)} km` : '--';
+    $('fitting-confidence').textContent = `${(params.confidenceLevel * 100).toFixed(0)}%`;
+    
+    // 停留统计
+    $('avg-resting-count').textContent = restingCounts.length > 0 ? 
+        `${(restingCounts.reduce((a, b) => a + b, 0) / restingCounts.length).toFixed(1)}次` : '--';
+    $('avg-resting-days').textContent = restingDays.length > 0 ? 
+        `${(restingDays.reduce((a, b) => a + b, 0) / restingDays.length).toFixed(1)}天` : '--';
+    
+    // 索饵场统计
+    $('feeding-area-count').textContent = feedingAreas ? feedingAreas.length : '--';
+    
+    // 水域优化统计
+    $('water-optimization').textContent = '已启用';
+    
+    // 群体行为统计
+    $('convergence-val').textContent = `${(metrics.convergence * 100).toFixed(1)}%`;
+    $('convergence-bar').style.width = `${metrics.convergence * 100}%`;
+    $('consistency-val').textContent = `${(metrics.consistency * 100).toFixed(1)}%`;
+    $('consistency-bar').style.width = `${metrics.consistency * 100}%`;
+    $('diversity-val').textContent = `${(metrics.diversity * 100).toFixed(1)}%`;
+    $('diversity-bar').style.width = `${metrics.diversity * 100}%`;
+    $('efficiency-val').textContent = `${(metrics.efficiency * 100).toFixed(1)}%`;
+    $('efficiency-bar').style.width = `${metrics.efficiency * 100}%`;
+    
+    // 模拟精度分析（使用群体路径）
+    if (groupPath) {
+        const start = agents[0].start;
+        const end = agents[0].end;
+        const envData = agents[0].envData;
+        
+        const pfi = calcPFI(groupPath, start, end);
+        const esi = calcESI(envData);
+        const ers = calcERS(groupPath, start, end);
+        const overall = 0.4 * pfi + 0.35 * esi + 0.25 * ers;
+        
+        $('pfi-val').textContent = `${(pfi * 100).toFixed(1)}%`;
+        $('pfi-bar').style.width = `${pfi * 100}%`;
+        $('esi-val').textContent = `${(esi * 100).toFixed(1)}%`;
+        $('esi-bar').style.width = `${esi * 100}%`;
+        $('ers-val').textContent = `${(ers * 100).toFixed(1)}%`;
+        $('ers-bar').style.width = `${ers * 100}%`;
+        $('acc-grade').textContent = grade(overall);
+    }
+}
+
+/* --- 评估指标 --- */
+function calcPFI(path, start, end) {
+    if (path.length < 3) return 0.5;
+    
+    // 平滑度
+    let angles = [];
+    for (let i = 1; i < path.length - 1; i++) {
+        const a1 = Math.atan2(path[i][1] - path[i-1][1], path[i][0] - path[i-1][0]);
+        const a2 = Math.atan2(path[i+1][1] - path[i][1], path[i+1][0] - path[i][0]);
+        let d = Math.abs(a2 - a1);
+        if (d > Math.PI) d = 2 * Math.PI - d;
+        angles.push(d);
+    }
+    
+    const mean = angles.reduce((a, b) => a + b, 0) / angles.length;
+    const variance = angles.reduce((a, v) => a + Math.pow(v - mean, 2), 0) / angles.length;
+    const std = Math.sqrt(variance);
+    const smoothScore = Math.max(0, 1 - (std / 1.0));
+    
+    // 目标导向
+    const straight = haversine(start, end);
+    const actual = pathDistance(path);
+    const goalScore = Math.min(1, Math.max(0, straight / actual));
+    
+    return 0.55 * smoothScore + 0.45 * goalScore;
+}
+
+function calcESI(envData) {
+    let totalScore = 0;
+    envData.forEach(env => {
+        const t = Math.max(0, 1 - Math.abs(env.temperature - 10) / 8);
+        const s = Math.max(0, 1 - Math.abs(env.salinity - 32) / 6);
+        const c = Math.max(0, 1 - Math.abs(env.current - 0.5) / 1.0);
+        totalScore += t * 0.4 + s * 0.4 + c * 0.2;
+    });
+    return Math.min(1, Math.max(0, totalScore / envData.length));
+}
+
+function calcERS(path, start, end) {
+    const straight = haversine(start, end);
+    const actual = pathDistance(path);
+    const energyEff = Math.min(1, straight / actual);
+    const swimMatch = Math.min(1, params.swim / 1.5);
+    const sizeSuit = Math.min(1, params.size / 0.8);
+    const energySuit = params.energy / 100;
+    return Math.min(1, Math.max(0, energyEff * 0.5 + swimMatch * 0.2 + sizeSuit * 0.15 + energySuit * 0.15));
+}
+
+function grade(acc) {
+    if (acc >= 0.8) return '优秀';
+    if (acc >= 0.7) return '良好';
+    if (acc >= 0.6) return '中等';
+    if (acc >= 0.5) return '一般';
+    return '较差';
+}
+
+/* --- 主流程 --- */
+function simulate() {
+    simulateMultiAgent();
+}
+
+/* --- 事件 --- */
+$('simulate-btn').addEventListener('click', simulate);
+
+/* --- 启动 --- */
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    initEnvChart();
+    syncDisplays();
+    updateStartForRiver(params.riverId);
+});
+</script>
+</body>
+</html>
